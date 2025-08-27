@@ -17,10 +17,16 @@ router.get('/health', (req, res) => {
 const validateMeeting = [
   body('title').notEmpty().trim(),
   body('date').isDate(),
-  body('time').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+  body('start_time').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+  body('end_time').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
   body('location').notEmpty().trim(),
-  body('attendees').isArray(),
-  body('reminder_minutes').optional().isInt({ min: 0 })
+  body('designated_attendees').optional().isArray(),
+  body('dress_code').optional().trim(),
+  body('invitation_reference').optional().trim(),
+  body('attendance_link').optional().trim(),
+  body('discussion_results').optional().trim(),
+  body('whatsapp_reminder_enabled').optional().isBoolean(),
+  body('group_notification_enabled').optional().isBoolean()
 ];
 
 const validateParticipant = [
@@ -51,12 +57,12 @@ router.get('/review/meeting-trends', dashboardController.getMeetingTrends);
 router.get('/meetings', meetingController.getAllMeetings);
 router.get('/meetings/search', meetingController.searchMeetings);
 router.get('/meetings/upcoming', meetingController.getUpcomingMeetings);
-router.get('/meetings/upcoming:1', meetingController.getUpcomingMeetings); // Handle incorrect URL format
+// Removed incorrect endpoint format
 router.get('/meetings/:id', meetingController.getMeeting);
 router.post('/meetings', validateMeeting, meetingController.createMeeting);
 router.put('/meetings/:id', validateMeeting, meetingController.updateMeeting);
 router.delete('/meetings/:id', meetingController.deleteMeeting);
-router.post('/meetings/:id/remind', meetingController.sendReminder);
+router.post('/meetings/:id/send-reminder', meetingController.sendReminder);
 
 // Participant Routes
 router.get('/participants', participantController.getAllParticipants);

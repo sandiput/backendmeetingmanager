@@ -34,6 +34,28 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false
     },
+    attendance_status: {
+      type: DataTypes.ENUM('pending', 'present', 'late', 'absent'),
+      allowNull: true,
+      defaultValue: 'pending'
+    },
+    arrival_time: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    reminder_sent: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
+    },
+    last_reminder_sent: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false

@@ -49,8 +49,8 @@ module.exports = (sequelize, DataTypes) => {
     attendance_link: DataTypes.STRING,
     discussion_results: DataTypes.TEXT,
     status: {
-      type: DataTypes.ENUM('confirmed', 'pending', 'completed', 'cancelled'),
-      defaultValue: 'pending'
+      type: DataTypes.ENUM('incoming', 'completed'),
+      defaultValue: 'incoming'
     },
     whatsapp_reminder_enabled: {
       type: DataTypes.BOOLEAN,

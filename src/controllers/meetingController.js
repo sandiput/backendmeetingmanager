@@ -1,7 +1,7 @@
 const { Meeting, Participant } = require('../models');
 const WhatsAppService = require('../services/whatsappService');
 const { validationResult } = require('express-validator');
-const { Op } = require('sequelize');
+const { Op, DataTypes } = require('sequelize');
 
 class MeetingController {
   // Get all meetings with pagination and filters
@@ -177,6 +177,17 @@ class MeetingController {
         });
       }
 
+      // Validate meeting ID
+      if (!req.params.id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Meeting ID is required'
+        });
+      }
+
+      console.log('Received update request for meeting ID:', req.params.id);
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+
       const meeting = await Meeting.findByPk(req.params.id);
 
       if (!meeting) {
@@ -186,6 +197,10 @@ class MeetingController {
         });
       }
 
+      // Ensure meeting.id is preserved
+      const meetingId = meeting.id;
+      console.log('Found meeting with ID:', meetingId);
+
       // Update participants if designated_attendees is provided
       if (req.body.designated_attendees) {
         const participants = await Participant.findAll({
@@ -193,11 +208,40 @@ class MeetingController {
             name: { [Op.in]: req.body.designated_attendees }
           }
         });
-        await meeting.setParticipants(participants);
+        
+        // Import UUID function
+        const { v4: uuidv4 } = require('uuid');
+        
+        // Log participants being set
+        console.log('Setting participants for meeting:', meetingId);
+        console.log('Participants:', participants.map(p => p.name));
+        
+        try {
+          // Use individualHooks to generate unique IDs for each association
+          await meeting.setParticipants(participants, { 
+            individualHooks: true,
+            through: { 
+              // Don't set ID here, let Sequelize handle it with individualHooks
+            }
+          });
+          console.log('Participants set successfully');
+        } catch (error) {
+          console.error('Error setting participants:', error);
+          throw error;
+        }
       }
 
-      // Update meeting fields
-      await meeting.update(req.body);
+      // Create a copy of req.body without the id field to prevent overriding
+      const updateData = { ...req.body };
+      delete updateData.id;
+      
+      // Log the data being used for update
+      console.log('Meeting ID for update:', meetingId);
+      console.log('Update data:', JSON.stringify(updateData, null, 2));
+      
+      // Update meeting fields with explicit ID preservation
+      updateData.id = meetingId; // Ensure ID is preserved
+      await meeting.update(updateData);
 
       // Reload meeting with participants
       await meeting.reload({
@@ -215,9 +259,10 @@ class MeetingController {
       });
     } catch (error) {
       console.error('Error updating meeting:', error);
+      console.error('Request body:', JSON.stringify(req.body, null, 2));
       res.status(500).json({
         success: false,
-        message: 'Error updating meeting'
+        message: 'Error updating meeting: ' + error.message
       });
     }
   }
