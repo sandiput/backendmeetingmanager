@@ -1,5 +1,5 @@
-const { Participant, Meeting } = require('../models');
-const { Op } = require('sequelize');
+const { Participant, Meeting } = require("../models");
+const { Op } = require("sequelize");
 
 class ParticipantController {
   // Get all participants with pagination
@@ -12,7 +12,7 @@ class ParticipantController {
       const { count, rows } = await Participant.findAndCountAll({
         limit,
         offset,
-        order: [['name', 'ASC']]
+        order: [["name", "ASC"]],
       });
 
       res.json({
@@ -21,14 +21,14 @@ class ParticipantController {
           participants: rows,
           total: count,
           page,
-          total_pages: Math.ceil(count / limit)
-        }
+          total_pages: Math.ceil(count / limit),
+        },
       });
     } catch (error) {
-      console.error('Error getting participants:', error);
+      console.error("Error getting participants:", error);
       res.status(500).json({
         success: false,
-        message: 'Error retrieving participants'
+        message: "Error retrieving participants",
       });
     }
   }
@@ -37,29 +37,31 @@ class ParticipantController {
   async getParticipant(req, res) {
     try {
       const participant = await Participant.findByPk(req.params.id, {
-        include: [{
-          model: Meeting,
-          as: 'meetings',
-          through: { attributes: ['attendance_status', 'attendance_time'] }
-        }]
+        include: [
+          {
+            model: Meeting,
+            as: "meetings",
+            through: { attributes: ["attendance_status", "attendance_time"] },
+          },
+        ],
       });
 
       if (!participant) {
         return res.status(404).json({
           success: false,
-          message: 'Participant not found'
+          message: "Participant not found",
         });
       }
 
       res.json({
         success: true,
-        data: participant
+        data: participant,
       });
     } catch (error) {
-      console.error('Error getting participant:', error);
+      console.error("Error getting participant:", error);
       res.status(500).json({
         success: false,
-        message: 'Error retrieving participant'
+        message: "Error retrieving participant",
       });
     }
   }
@@ -78,20 +80,20 @@ class ParticipantController {
 
       res.status(201).json({
         success: true,
-        data: participant
+        data: participant,
       });
     } catch (error) {
-      if (error.name === 'SequelizeUniqueConstraintError') {
+      if (error.name === "SequelizeUniqueConstraintError") {
         return res.status(400).json({
           success: false,
-          message: 'A participant with this WhatsApp number already exists'
+          message: "A participant with this WhatsApp number already exists",
         });
       }
 
-      console.error('Error creating participant:', error);
+      console.error("Error creating participant:", error);
       res.status(500).json({
         success: false,
-        message: 'Error creating participant'
+        message: "Error creating participant",
       });
     }
   }
@@ -104,7 +106,7 @@ class ParticipantController {
       if (!participant) {
         return res.status(404).json({
           success: false,
-          message: 'Participant not found'
+          message: "Participant not found",
         });
       }
 
@@ -119,20 +121,20 @@ class ParticipantController {
 
       res.json({
         success: true,
-        data: participant
+        data: participant,
       });
     } catch (error) {
-      if (error.name === 'SequelizeUniqueConstraintError') {
+      if (error.name === "SequelizeUniqueConstraintError") {
         return res.status(400).json({
           success: false,
-          message: 'A participant with this WhatsApp number already exists'
+          message: "A participant with this WhatsApp number already exists",
         });
       }
 
-      console.error('Error updating participant:', error);
+      console.error("Error updating participant:", error);
       res.status(500).json({
         success: false,
-        message: 'Error updating participant'
+        message: "Error updating participant",
       });
     }
   }
@@ -145,7 +147,7 @@ class ParticipantController {
       if (!participant) {
         return res.status(404).json({
           success: false,
-          message: 'Participant not found'
+          message: "Participant not found",
         });
       }
 
@@ -153,13 +155,13 @@ class ParticipantController {
 
       res.json({
         success: true,
-        message: 'Participant deleted successfully'
+        message: "Participant deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting participant:', error);
+      console.error("Error deleting participant:", error);
       res.status(500).json({
         success: false,
-        message: 'Error deleting participant'
+        message: "Error deleting participant",
       });
     }
   }
@@ -175,10 +177,7 @@ class ParticipantController {
       const whereClause = {};
 
       if (query) {
-        whereClause[Op.or] = [
-          { name: { [Op.like]: `%${query}%` } },
-          { whatsapp_number: { [Op.like]: `%${query}%` } }
-        ];
+        whereClause[Op.or] = [{ name: { [Op.like]: `%${query}%` } }, { whatsapp_number: { [Op.like]: `%${query}%` } }];
       }
 
       if (seksi) {
@@ -189,7 +188,7 @@ class ParticipantController {
         where: whereClause,
         limit,
         offset,
-        order: [['name', 'ASC']]
+        order: [["name", "ASC"]],
       });
 
       res.json({
@@ -198,14 +197,14 @@ class ParticipantController {
           participants: rows,
           total: count,
           page,
-          total_pages: Math.ceil(count / limit)
-        }
+          total_pages: Math.ceil(count / limit),
+        },
       });
     } catch (error) {
-      console.error('Error searching participants:', error);
+      console.error("Error searching participants:", error);
       res.status(500).json({
         success: false,
-        message: 'Error searching participants'
+        message: "Error searching participants",
       });
     }
   }
@@ -222,7 +221,7 @@ class ParticipantController {
         where: { seksi },
         limit,
         offset,
-        order: [['name', 'ASC']]
+        order: [["name", "ASC"]],
       });
 
       res.json({
@@ -231,14 +230,14 @@ class ParticipantController {
           participants: rows,
           total: count,
           page,
-          total_pages: Math.ceil(count / limit)
-        }
+          total_pages: Math.ceil(count / limit),
+        },
       });
     } catch (error) {
-      console.error('Error getting participants by seksi:', error);
+      console.error("Error getting participants by seksi:", error);
       res.status(500).json({
         success: false,
-        message: 'Error retrieving participants by seksi'
+        message: "Error retrieving participants by seksi",
       });
     }
   }
@@ -246,16 +245,16 @@ class ParticipantController {
   // Helper method to format WhatsApp number
   formatWhatsAppNumber(number) {
     // Remove any non-digit characters
-    let cleaned = number.replace(/\D/g, '');
+    let cleaned = number.replace(/\D/g, "");
 
     // Remove leading 0 if present
-    if (cleaned.startsWith('0')) {
+    if (cleaned.startsWith("0")) {
       cleaned = cleaned.substring(1);
     }
 
     // Add country code if not present
-    if (!cleaned.startsWith('62')) {
-      cleaned = '62' + cleaned;
+    if (!cleaned.startsWith("62")) {
+      cleaned = "62" + cleaned;
     }
 
     return cleaned;

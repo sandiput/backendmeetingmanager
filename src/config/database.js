@@ -1,8 +1,13 @@
 const { Sequelize } = require("sequelize");
 const logger = require("../utils/logger");
+const sqlLogger = require("../utils/sqlLogger");
 
 // Buat fungsi logging yang aman
 const sequelizeLogger = (msg) => {
+  // Log SQL statement ke file terpisah
+  sqlLogger(msg);
+  
+  // Tetap gunakan logger yang ada untuk konsistensi
   if (process.env.NODE_ENV === "development") {
     if (typeof logger.debug === "function") {
       logger.debug(msg);
@@ -20,7 +25,7 @@ const sequelize = new Sequelize({
   username: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "meeting_manager",
-  logging: sequelizeLogger,
+  logging: sequelizeLogger, // Gunakan logger yang sudah dimodifikasi
   timezone: "+07:00", // aman untuk MySQL
   dialectOptions: {
     timezone: "+07:00",

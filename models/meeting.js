@@ -32,12 +32,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     start_time: {
-      type: DataTypes.TIME,
-      allowNull: false
+      type: DataTypes.STRING,
+      allowNull: true
     },
     end_time: {
-      type: DataTypes.TIME,
-      allowNull: false
+      type: DataTypes.STRING,
+      allowNull: true
     },
     location: {
       type: DataTypes.STRING,
