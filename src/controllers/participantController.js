@@ -100,6 +100,7 @@ class ParticipantController {
 
   // Update participant
   async updateParticipant(req, res) {
+    console.log("updatereq :", req.body);
     try {
       const participant = await Participant.findByPk(req.params.id);
 
@@ -111,23 +112,42 @@ class ParticipantController {
       }
 
       const { whatsapp_number, ...updateData } = req.body;
+      console.log("updatedata :", updateData);
+      console.log(whatsapp_number);
+      // Validate required fields
+      if (!updateData.name || !updateData.nip || !updateData.seksi) {
+        return res.status(400).json({
+          success: false,
+          message: "Name, NIP, and Seksi are required fields",
+        });
+      }
 
       // Format WhatsApp number if provided
       if (whatsapp_number) {
+
         updateData.whatsapp_number = this.formatWhatsAppNumber(whatsapp_number);
       }
+      console.log("sebelum :", participant);
 
       await participant.update(updateData);
-
+      console.log("sesudah :", participant);
       res.json({
         success: true,
         data: participant,
       });
     } catch (error) {
       if (error.name === "SequelizeUniqueConstraintError") {
+        const field = error.errors[0]?.path || "field";
         return res.status(400).json({
           success: false,
-          message: "A participant with this WhatsApp number already exists",
+          message: `A participant with this ${field} already exists`,
+        });
+      }
+
+      if (error.name === "SequelizeValidationError") {
+        return res.status(400).json({
+          success: false,
+          message: "Validation error: " + error.errors.map((e) => e.message).join(", "),
         });
       }
 
@@ -135,6 +155,7 @@ class ParticipantController {
       res.status(500).json({
         success: false,
         message: "Error updating participant",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }

@@ -60,13 +60,13 @@ router.delete("/meetings/:id", meetingController.deleteMeeting);
 router.post("/meetings/:id/send-reminder", meetingController.sendReminder);
 
 // Participant Routes
-router.get("/participants", participantController.getAllParticipants);
-router.get("/participants/search/:query", participantController.searchParticipants);
-router.get("/participants/seksi/:seksi", participantController.getParticipantsBySeksi);
-router.get("/participants/:id", participantController.getParticipant);
-router.post("/participants", validateParticipant, participantController.createParticipant);
-router.put("/participants/:id", validateParticipant, participantController.updateParticipant);
-router.delete("/participants/:id", participantController.deleteParticipant);
+router.get("/participants", (req, res) => participantController.getAllParticipants(req, res));
+router.get("/participants/search/:query", (req, res) => participantController.searchParticipants(req, res));
+router.get("/participants/seksi/:seksi", (req, res) => participantController.getParticipantsBySeksi(req, res));
+router.get("/participants/:id", (req, res) => participantController.getParticipant(req, res));
+router.post("/participants", validateParticipant, (req, res) => participantController.createParticipant(req, res));
+router.put("/participants/:id", validateParticipant, (req, res) => participantController.updateParticipant(req, res));
+router.delete("/participants/:id", (req, res) => participantController.deleteParticipant(req, res));
 
 // Settings Routes
 router.get("/settings", settingsController.getSettings);
