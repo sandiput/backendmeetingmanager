@@ -81,7 +81,12 @@ class ScheduledJobs {
 
         for (const meeting of meetings) {
           try {
-            const meetingTime = new Date(`${meeting.date}T${meeting.time}`);
+            // Ensure time is in ISO format (HH:mm:ss)
+            const timeISO = meeting.time.includes(':') ? 
+              (meeting.time.split(':').length === 2 ? `${meeting.time}:00` : meeting.time) : 
+              `${meeting.time}:00:00`;
+              
+            const meetingTime = new Date(`${meeting.date}T${timeISO}`);
             const reminderTime = new Date(meetingTime.getTime() - (meeting.reminder_minutes * 60000));
 
             // Check if it's time to send reminder

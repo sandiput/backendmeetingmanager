@@ -9,18 +9,25 @@ const formatDateIndonesian = (date) => {
   return format(date, 'EEEE, d MMMM yyyy', { locale: id });
 };
 
-// Format time to 24-hour format
+// Format time to 24-hour format with seconds (ISO 8601 compliant)
 const formatTime = (time) => {
   if (!time) return '';
   
-  // If time is already in HH:mm format, return as is
+  // If time is already in HH:mm:ss format, ensure it's properly formatted
+  if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(time)) {
+    const [hours, minutes, seconds] = time.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}:${seconds}`;
+  }
+  
+  // If time is in HH:mm format, add seconds and ensure proper formatting
   if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
-    return time;
+    const [hours, minutes] = time.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}:00`;
   }
 
-  // If time is a Date object, format it
+  // If time is a Date object, format it with seconds
   if (time instanceof Date) {
-    return format(time, 'HH:mm');
+    return format(time, 'HH:mm:ss');
   }
 
   return '';
@@ -30,13 +37,19 @@ const formatTime = (time) => {
 const combineDateAndTime = (dateStr, timeStr) => {
   if (!dateStr || !timeStr) return null;
 
-  const [hours, minutes] = timeStr.split(':');
+  // Parse time components, handling both HH:mm and HH:mm:ss formats
+  const timeParts = timeStr.split(':');
+  const hours = parseInt(timeParts[0] || 0);
+  const minutes = parseInt(timeParts[1] || 0);
+  const seconds = parseInt(timeParts[2] || 0);
+  
   const date = parseISO(dateStr);
   
   if (!isValid(date)) return null;
 
-  date.setHours(parseInt(hours));
-  date.setMinutes(parseInt(minutes));
+  date.setHours(hours);
+  date.setMinutes(minutes);
+  date.setSeconds(seconds);
   
   return date;
 };

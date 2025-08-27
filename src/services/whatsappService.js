@@ -129,8 +129,8 @@ class WhatsAppService {
         whatsapp_reminder_enabled: true,
         reminder_sent_at: null,
         start_time: {
-          $gte: now.toISOString().split('T')[1].substring(0, 5),
-          $lte: reminderTime.toISOString().split('T')[1].substring(0, 5)
+          $gte: now.toISOString().split('T')[1].substring(0, 8),
+          $lte: reminderTime.toISOString().split('T')[1].substring(0, 8)
         }
       });
 
@@ -166,8 +166,8 @@ class WhatsAppService {
       const testMeeting = {
         title: 'Test Meeting',
         date: new Date().toISOString().split('T')[0],
-        start_time: '10:00',
-        end_time: '11:00',
+        start_time: '10:00:00',
+        end_time: '11:00:00',
         location: 'Test Room',
         meeting_link: 'https://test-meeting.com',
         dress_code: 'Casual',

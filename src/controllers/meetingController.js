@@ -2,6 +2,7 @@ const { Meeting, Participant } = require('../models');
 const WhatsAppService = require('../services/whatsappService');
 const { validationResult } = require('express-validator');
 const { Op, DataTypes } = require('sequelize');
+const { normalizeTimeToISO } = require('../utils/validator');
 
 class MeetingController {
   // Get all meetings with pagination and filters
@@ -138,8 +139,17 @@ class MeetingController {
           name: { [Op.in]: req.body.designated_attendees }
         }
       });
+      
+      // Normalize time fields to ISO format
+      const meetingData = { ...req.body };
+      if (meetingData.start_time) {
+        meetingData.start_time = normalizeTimeToISO(meetingData.start_time) || meetingData.start_time;
+      }
+      if (meetingData.end_time) {
+        meetingData.end_time = normalizeTimeToISO(meetingData.end_time) || meetingData.end_time;
+      }
 
-      const meeting = await Meeting.create(req.body);
+      const meeting = await Meeting.create(meetingData);
       await meeting.setParticipants(participants);
 
       // Reload meeting with participants
@@ -235,6 +245,14 @@ class MeetingController {
       const updateData = { ...req.body };
       delete updateData.id;
       
+      // Normalize time fields to ISO format
+      if (updateData.start_time) {
+        updateData.start_time = normalizeTimeToISO(updateData.start_time) || updateData.start_time;
+      }
+      if (updateData.end_time) {
+        updateData.end_time = normalizeTimeToISO(updateData.end_time) || updateData.end_time;
+      }
+      
       // Log the data being used for update
       console.log('Meeting ID for update:', meetingId);
       console.log('Update data:', JSON.stringify(updateData, null, 2));
@@ -315,9 +333,17 @@ class MeetingController {
 
       // Send reminder to all active participants
       for (const participant of meeting.participants) {
+        // Format time for display (remove seconds if present)
+        const startTime = meeting.start_time.includes(':') ? 
+          meeting.start_time.split(':').slice(0, 2).join(':') : 
+          meeting.start_time;
+        const endTime = meeting.end_time.includes(':') ? 
+          meeting.end_time.split(':').slice(0, 2).join(':') : 
+          meeting.end_time;
+          
         await WhatsAppService.sendMessage(
           participant.whatsapp_number,
-          `🔔 *Reminder Meeting*\n\n${meeting.title}\n📅 ${meeting.date}\n⏰ ${meeting.start_time} - ${meeting.end_time}\n📍 ${meeting.location}`
+          `🔔 *Reminder Meeting*\n\n${meeting.title}\n📅 ${meeting.date}\n⏰ ${startTime} - ${endTime}\n📍 ${meeting.location}`
         );
       }
 

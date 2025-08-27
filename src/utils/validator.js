@@ -26,10 +26,41 @@ const isValidDate = (dateString) => {
   return date instanceof Date && !isNaN(date);
 };
 
-// Validate time format (HH:mm)
+// Validate time format (HH:mm:ss) - ISO 8601 compliant
 const isValidTime = (timeString) => {
-  const regex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-  return regex.test(timeString);
+  // Accept both HH:mm and HH:mm:ss formats
+  const regexWithSeconds = /^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+  const regexWithoutSeconds = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  
+  // If time has seconds format, return as is
+  if (regexWithSeconds.test(timeString)) {
+    return true;
+  }
+  
+  // If time has no seconds, it's still valid but we should normalize it
+  return regexWithoutSeconds.test(timeString);
+};
+
+// Normalize time to ISO format (HH:mm:ss)
+const normalizeTimeToISO = (timeString) => {
+  if (!timeString) return null;
+  
+  // If already has seconds, ensure it's properly formatted
+  const regexWithSeconds = /^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+  if (regexWithSeconds.test(timeString)) {
+    // Ensure hours are two digits
+    const [hours, minutes, seconds] = timeString.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}:${seconds}`;
+  }
+  
+  // If no seconds, add them and ensure hours are two digits
+  const regexWithoutSeconds = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (regexWithoutSeconds.test(timeString)) {
+    const [hours, minutes] = timeString.split(':');
+    return `${hours.padStart(2, '0')}:${minutes}:00`;
+  }
+  
+  return null; // Invalid format
 };
 
 // Validate NIP format
@@ -134,6 +165,7 @@ module.exports = {
   formatWhatsAppNumber,
   isValidDate,
   isValidTime,
+  normalizeTimeToISO,
   isValidNIP,
   validateMeetingData,
   validateParticipantData,
