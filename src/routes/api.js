@@ -39,14 +39,14 @@ const validateSettings = [
 ];
 
 // Dashboard Routes
-router.get("/dashboard/stats", dashboardController.getStats);
+router.get("/dashboard/stats", (req, res) => dashboardController.getStats(req, res));
 router.get("/dashboard/upcoming", meetingController.getUpcomingMeetings);
 
 // Review Routes
-router.get("/review/stats", dashboardController.getReviewStats);
-router.get("/review/top-participants", dashboardController.getTopParticipants);
-router.get("/review/seksi-stats", dashboardController.getSeksiStats);
-router.get("/review/meeting-trends", dashboardController.getMeetingTrends);
+router.get("/review/stats", (req, res) => dashboardController.getReviewStats(req, res));
+router.get("/review/top-participants", (req, res) => dashboardController.getTopParticipants(req, res));
+router.get("/review/seksi-stats", (req, res) => dashboardController.getSeksiStats(req, res));
+router.get("/review/meeting-trends", (req, res) => dashboardController.getMeetingTrends(req, res));
 
 // Meeting Routes
 router.get("/meetings", meetingController.getAllMeetings);

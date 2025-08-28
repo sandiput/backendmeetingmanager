@@ -154,7 +154,6 @@ class MeetingController {
 
       // Use meeting data as is without time normalization
       const meetingData = { ...req.body };
-
       const meeting = await Meeting.create(meetingData);
       await meeting.setParticipants(participants);
 
