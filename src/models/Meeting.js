@@ -62,8 +62,8 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT
     },
     status: {
-      type: DataTypes.ENUM('incoming', 'completed'),
-      defaultValue: 'incoming'
+      type: DataTypes.ENUM('upcoming', 'completed'),
+      defaultValue: 'upcoming'
     },
     whatsapp_reminder_enabled: {
       type: DataTypes.BOOLEAN,

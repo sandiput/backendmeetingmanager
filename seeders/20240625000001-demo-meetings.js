@@ -66,8 +66,8 @@ module.exports = {
       const endHour = startHour + 1 + Math.floor(Math.random() * 2);
       const endTime = `${endHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`;
       
-      // Set status based on date: incoming if >= today, completed if < today
-      const status = randomDate >= today ? 'incoming' : 'completed';
+      // Set status based on date: upcoming if >= today, completed if < today
+      const status = randomDate >= today ? 'upcoming' : 'completed';
       
       meetings.push({
         id: uuidv4(),
