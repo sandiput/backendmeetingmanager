@@ -26,23 +26,65 @@ class MeetingController {
         where.date = { ...where.date, [Op.lte]: req.query.date_to };
       }
 
-      const { count, rows: meetings } = await Meeting.findAndCountAll({
-        where,
-        order: [
-          ["date", "ASC"],
-          ["start_time", "ASC"],
-        ],
-        offset,
-        limit,
-        include: [
-          {
-            model: Participant,
-            as: "participants",
-            attributes: ["name", "seksi"],
-            through: { attributes: [] },
-          },
-        ],
-      });
+      // If no status filter is applied, we need to sort by status first (upcoming first)
+      let meetings, count;
+      if (!req.query.status) {
+        // Get all meetings without pagination first to sort by status
+        const meetingsRaw = await Meeting.findAll({
+          where,
+          include: [
+            {
+              model: Participant,
+              as: "participants",
+              attributes: ["name", "seksi"],
+              through: { attributes: [] },
+            },
+          ],
+        });
+
+        // Separate and sort meetings by status
+        const upcomingMeetings = meetingsRaw
+          .filter(m => m.status === 'upcoming')
+          .sort((a, b) => {
+            if (a.date !== b.date) return new Date(a.date) - new Date(b.date);
+            return a.start_time.localeCompare(b.start_time);
+          });
+        
+        const completedMeetings = meetingsRaw
+          .filter(m => m.status === 'completed')
+          .sort((a, b) => {
+            if (a.date !== b.date) return new Date(b.date) - new Date(a.date);
+            return b.start_time.localeCompare(a.start_time);
+          });
+
+        // Combine: upcoming first, then completed
+        const sortedMeetings = [...upcomingMeetings, ...completedMeetings];
+        
+        // Apply pagination to sorted results
+        count = sortedMeetings.length;
+        meetings = sortedMeetings.slice(offset, offset + limit);
+      } else {
+        // If status filter is applied, use normal query with pagination
+        const result = await Meeting.findAndCountAll({
+          where,
+          order: [
+            ["date", "ASC"],
+            ["start_time", "ASC"],
+          ],
+          offset,
+          limit,
+          include: [
+            {
+              model: Participant,
+              as: "participants",
+              attributes: ["name", "seksi"],
+              through: { attributes: [] },
+            },
+          ],
+        });
+        count = result.count;
+        meetings = result.rows;
+      }
 
       // Log audit for meetings list view
       await logDetailedAudit(req, {
