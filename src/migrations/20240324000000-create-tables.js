@@ -73,7 +73,7 @@ module.exports = {
       dress_code: {
         type: Sequelize.STRING
       },
-      agenda: {
+      discussion_result: {
         type: Sequelize.STRING
       },
       notes: {

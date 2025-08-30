@@ -171,12 +171,15 @@ class MeetingController {
         });
       }
 
-      // Find participants by name
-      const participants = await Participant.findAll({
-        where: {
-          name: { [Op.in]: req.body.designated_attendees },
-        },
-      });
+      // Find participants by name (if designated_attendees is provided)
+      let participants = [];
+      if (req.body.designated_attendees && Array.isArray(req.body.designated_attendees)) {
+        participants = await Participant.findAll({
+          where: {
+            name: { [Op.in]: req.body.designated_attendees },
+          },
+        });
+      }
 
       // Use meeting data as is without time normalization
       const meetingData = { ...req.body };

@@ -98,7 +98,7 @@ const generateMeetingData = (dates) => {
       dress_code: index % 2 === 0 ? 'Formal' : 'Casual',
       invitation_reference: `REF/${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${index + 1}`,
       attendance_link: `https://forms.office.com/attendance/${index}`,
-      discussion_results: isPast ? 'Hasil pembahasan telah didokumentasikan dan ditindaklanjuti sesuai arahan pimpinan.' : null,
+      agenda: isPast ? 'Agenda pembahasan telah didokumentasikan dan ditindaklanjuti sesuai arahan pimpinan.' : null,
       status: isPast ? (index % 3 === 0 ? 'cancelled' : 'completed') : (index % 3 === 0 ? 'pending' : 'confirmed'),
       whatsapp_reminder_enabled: true,
       group_notification_enabled: index % 2 !== 0,

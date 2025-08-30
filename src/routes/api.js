@@ -20,9 +20,9 @@ const validateMeeting = [
   body("location").notEmpty().trim(),
   body("designated_attendees").optional().isArray(),
   body("dress_code").optional().trim(),
-  body("invitation_reference").optional().trim(),
-  body("attendance_link").optional().trim(),
+  body("agenda").optional().trim(),
   body("discussion_results").optional().trim(),
+  body("notes").optional().trim(),
   body("whatsapp_reminder_enabled").optional().isBoolean(),
   body("group_notification_enabled").optional().isBoolean(),
 ];

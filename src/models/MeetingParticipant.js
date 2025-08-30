@@ -26,22 +26,10 @@ MeetingParticipant.init({
     }
   },
 
-  arrival_time: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  notes: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  reminder_sent: {
+  is_designated: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
-  },
-  last_reminder_sent: {
-    type: DataTypes.DATE,
-    allowNull: true
   }
 }, {
   sequelize,

@@ -78,9 +78,9 @@ module.exports = {
         location: location,
         meeting_link: isOnline ? `https://meeting-link-${i}.example.com` : null,
         dress_code: ['Seragam Dinas', 'Pakaian Formal', 'Seragam Harian', 'Pakaian Rapi'][Math.floor(Math.random() * 4)],
-        agenda: `Agenda rapat ${indonesianMeetingTitles[i - 1]}`,
+        discussion_result: `Agenda rapat ${indonesianMeetingTitles[i - 1]}`,
         notes: `Catatan untuk rapat ${indonesianMeetingTitles[i - 1]}`,
-        discussion_results: Math.random() > 0.3 ? `Hasil rapat: Telah dibahas dan disepakati beberapa poin penting terkait operasional. Tindak lanjut akan dilaksanakan sesuai timeline yang telah ditetapkan.` : null,
+        agenda: Math.random() > 0.3 ? `Agenda rapat: Pembahasan operasional dan tindak lanjut sesuai timeline yang telah ditetapkan.` : null,
         status: status,
         whatsapp_reminder_enabled: Math.random() > 0.2, // 80% chance of being true
         group_notification_enabled: Math.random() > 0.3, // 70% chance of being true

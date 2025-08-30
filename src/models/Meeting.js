@@ -52,13 +52,13 @@ module.exports = (sequelize) => {
     dress_code: {
       type: DataTypes.STRING
     },
-    invitation_reference: {
-      type: DataTypes.STRING
-    },
-    attendance_link: {
-      type: DataTypes.STRING
+    agenda: {
+      type: DataTypes.TEXT
     },
     discussion_results: {
+      type: DataTypes.TEXT
+    },
+    notes: {
       type: DataTypes.TEXT
     },
     status: {
