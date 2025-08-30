@@ -8,27 +8,31 @@ module.exports = {
     
     // Seksi options
     const seksiOptions = [
-      'Umum',
-      'Keuangan',
-      'Perencanaan',
-      'SDM',
-      'IT',
-      'Operasional',
-      'Marketing',
-      'Hukum',
-      'Kepatuhan',
-      'Audit'
+      'Intelijen Kepabeanan I',
+      'Intelijen Kepabeanan II',
+      'Intelijen Cukai',
+      'Dukungan Operasi Intelijen'
     ];
     
-    // Generate 50 random participants
-    for (let i = 1; i <= 50; i++) {
+    // Generate 30 random participants with Indonesian names
+    const indonesianNames = [
+      'Ahmad Rizki Pratama', 'Siti Nurhaliza', 'Budi Santoso', 'Dewi Sartika', 'Eko Prasetyo',
+      'Fitri Handayani', 'Gunawan Wijaya', 'Hesti Purwanti', 'Indra Kusuma', 'Joko Widodo',
+      'Kartika Sari', 'Lukman Hakim', 'Maya Sari', 'Nugroho Adi', 'Oktavia Ningsih',
+      'Putra Mahendra', 'Qori Amelia', 'Rudi Hartono', 'Sari Dewi', 'Taufik Hidayat',
+      'Umi Kalsum', 'Vina Panduwinata', 'Wahyu Setiawan', 'Xenia Maharani', 'Yudi Setiawan',
+      'Zahra Aulia', 'Agus Salim', 'Bayu Aji', 'Citra Kirana', 'Doni Salmanan'
+    ];
+    
+    for (let i = 1; i <= 30; i++) {
       const seksi = seksiOptions[Math.floor(Math.random() * seksiOptions.length)];
-      const nip = `${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      // Generate 18 digit NIP
+      const nip = `${Math.floor(100000000000000000 + Math.random() * 900000000000000000)}`;
       
       participants.push({
         id: uuidv4(),
-        name: `Participant ${i}`,
-        whatsapp_number: `08${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+        name: indonesianNames[i - 1],
+        whatsapp_number: `628${Math.floor(100000000 + Math.random() * 900000000)}`,
         nip: nip,
         seksi: seksi,
         is_active: true,

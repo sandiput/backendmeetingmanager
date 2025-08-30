@@ -3,6 +3,7 @@ const WhatsAppService = require("../services/whatsappService");
 const { validationResult } = require("express-validator");
 const { Op, DataTypes } = require("sequelize");
 const { normalizeTimeToISO } = require("../utils/validator");
+const { logDetailedAudit } = require("../middleware/auditLogger");
 
 class MeetingController {
   // Get all meetings with pagination and filters
@@ -41,6 +42,14 @@ class MeetingController {
             through: { attributes: [] },
           },
         ],
+      });
+
+      // Log audit for meetings list view
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'meetings',
+        description: `Lihat Daftar Meeting (halaman ${page}, ${meetings.length} hasil)`,
+        success: true
       });
 
       res.json({
@@ -86,7 +95,15 @@ class MeetingController {
         ],
       });
 
-      res.json({
+      // Log audit for upcoming meetings view
+       await logDetailedAudit(req, {
+         action_type: 'read',
+         table_name: 'meetings',
+         description: `Lihat Meeting Mendatang (${meetings.length} hasil)`,
+         success: true
+       });
+
+       res.json({
         success: true,
         data: meetings,
       });
@@ -119,6 +136,15 @@ class MeetingController {
           message: "Meeting not found",
         });
       }
+
+      // Log audit for meeting read
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'meetings',
+        record_id: meeting.id,
+        description: `Lihat Detail Meeting: ${meeting.title}`,
+        success: true
+      });
 
       res.json({
         success: true,
@@ -167,6 +193,17 @@ class MeetingController {
             through: { attributes: [] },
           },
         ],
+      });
+
+      // Log audit for meeting creation
+      await logDetailedAudit(req, {
+        action_type: 'CREATE',
+        table_name: 'meetings',
+        record_id: meeting.id,
+        new_values: JSON.stringify(meeting.toJSON()),
+        changed_fields: Object.keys(meetingData).join(','),
+        description: `Buat Meeting Baru: ${meeting.title}`,
+        success: true
       });
 
       res.status(201).json({
@@ -261,6 +298,9 @@ class MeetingController {
       console.log("Meeting ID for update:", meetingId);
       console.log("Update data:", JSON.stringify(updateData, null, 2));
 
+      // Store old values for audit
+      const oldValues = { ...meeting.dataValues };
+      
       // Update meeting fields with explicit ID preservation
       updateData.id = meetingId; // Ensure ID is preserved
       await meeting.update(updateData);
@@ -275,6 +315,22 @@ class MeetingController {
             through: { attributes: [] },
           },
         ],
+      });
+
+      // Log audit for meeting update
+      const changedFields = Object.keys(updateData).filter(key => 
+        key !== 'id' && oldValues[key] !== updateData[key]
+      );
+      
+      await logDetailedAudit(req, {
+        action_type: 'UPDATE',
+        table_name: 'meetings',
+        record_id: meeting.id,
+        old_values: JSON.stringify(oldValues),
+        new_values: JSON.stringify(meeting.toJSON()),
+        changed_fields: changedFields.join(','),
+        description: `Ubah Meeting: ${meeting.title}`,
+        success: true
       });
 
       res.json({
@@ -303,7 +359,20 @@ class MeetingController {
         });
       }
 
+      // Store meeting data for audit before deletion
+      const deletedMeetingData = { ...meeting.dataValues };
+      
       await meeting.destroy();
+
+      // Log audit for meeting deletion
+      await logDetailedAudit(req, {
+        action_type: 'DELETE',
+        table_name: 'meetings',
+        record_id: req.params.id,
+        old_values: JSON.stringify(deletedMeetingData),
+        description: `Hapus Meeting: ${deletedMeetingData.title}`,
+        success: true
+      });
 
       res.json({
         success: true,
@@ -399,18 +468,26 @@ class MeetingController {
         });
       }
 
-      res.json({
-        success: true,
-        data: meetings,
-      });
-    } catch (error) {
-      console.error("Error searching meetings:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error searching meetings",
-      });
+      // Log audit for meeting search
+        await logDetailedAudit(req, {
+          action_type: 'READ',
+          table_name: 'meetings',
+          description: `Searched meetings with query: "${query}" (${meetings.length} results)`,
+          success: true
+        });
+
+        res.json({
+          success: true,
+          data: meetings,
+        });
+      } catch (error) {
+        console.error("Error searching meetings:", error);
+        res.status(500).json({
+          success: false,
+          message: "Error searching meetings",
+        });
+      }
     }
   }
-}
 
-module.exports = new MeetingController();
+  module.exports = new MeetingController();

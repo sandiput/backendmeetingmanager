@@ -9,29 +9,53 @@ module.exports = {
     // Location options
     const locationOptions = [
       'Ruang Rapat Utama',
-      'Ruang Rapat Lantai 2',
-      'Ruang Rapat Lantai 3',
-      'Ruang Direktur',
-      'Aula',
+      'Ruang Koordinasi A',
+      'Ruang Briefing B',
+      'Aula Kantor',
+      'Ruang Rapat Direksi',
+      'Ruang Pelatihan',
       'Ruang Konferensi',
+      'Ruang Sidang',
       'Online (Zoom)',
-      'Online (Google Meet)',
-      'Online (Microsoft Teams)',
-      'Ruang Training'
+      'Online (Google Meet)'
     ];
     
-    // Generate 20 random meetings
+    // Generate 20 random meetings with Indonesian titles
+    const indonesianMeetingTitles = [
+      'Rapat Koordinasi Bulanan Tim Intelijen',
+      'Evaluasi Kinerja Operasi Kepabeanan',
+      'Briefing Keamanan dan Pengawasan Cukai',
+      'Rapat Perencanaan Strategi Intelijen',
+      'Koordinasi Lintas Seksi Operasional',
+      'Review Laporan Investigasi Kepabeanan',
+      'Rapat Evaluasi Sistem Pengawasan',
+      'Briefing Operasi Khusus Intelijen',
+      'Koordinasi dengan Unit Penegakan Hukum',
+      'Rapat Analisis Risiko Kepabeanan',
+      'Evaluasi Prosedur Operasi Standar',
+      'Briefing Keamanan Fasilitas Pelabuhan',
+      'Rapat Koordinasi Antar Instansi',
+      'Review Kebijakan Pengawasan Cukai',
+      'Rapat Peningkatan Kapasitas SDM',
+      'Koordinasi Operasi Gabungan',
+      'Briefing Teknologi Pengawasan Terbaru',
+      'Rapat Evaluasi Target Kinerja',
+      'Koordinasi Sistem Informasi Intelijen',
+      'Review Standar Operasional Prosedur'
+    ];
+    
     for (let i = 1; i <= 20; i++) {
       const location = locationOptions[Math.floor(Math.random() * locationOptions.length)];
       const isOnline = location.includes('Online');
       
-      // Generate random date within the next 30 days
+      // Generate random date within range of -15 to +15 days from today
       const today = new Date();
-      const futureDate = new Date(today);
-      futureDate.setDate(today.getDate() + Math.floor(Math.random() * 30));
+      const randomDate = new Date(today);
+      const dayOffset = Math.floor(Math.random() * 31) - 15; // -15 to +15 days
+      randomDate.setDate(today.getDate() + dayOffset);
       
       // Format date as YYYY-MM-DD
-      const date = futureDate.toISOString().split('T')[0];
+      const date = randomDate.toISOString().split('T')[0];
       
       // Generate random start time between 8:00 and 16:00
       const startHour = 8 + Math.floor(Math.random() * 8);
@@ -42,22 +66,21 @@ module.exports = {
       const endHour = startHour + 1 + Math.floor(Math.random() * 2);
       const endTime = `${endHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}:00`;
       
-      // Generate random status
-      const statusOptions = ['confirmed', 'pending', 'completed', 'cancelled'];
-      const status = statusOptions[Math.floor(Math.random() * statusOptions.length)];
+      // Set status based on date: incoming if >= today, completed if < today
+      const status = randomDate >= today ? 'incoming' : 'completed';
       
       meetings.push({
         id: uuidv4(),
-        title: `Meeting ${i}: ${['Weekly Update', 'Project Planning', 'Status Review', 'Team Sync', 'Strategic Discussion'][Math.floor(Math.random() * 5)]}`,
+        title: indonesianMeetingTitles[i - 1],
         date: date,
         start_time: startTime,
         end_time: endTime,
         location: location,
         meeting_link: isOnline ? `https://meeting-link-${i}.example.com` : null,
-        dress_code: ['Formal', 'Business Casual', 'Casual', null][Math.floor(Math.random() * 4)],
-        invitation_reference: `INV-${Math.floor(10000 + Math.random() * 90000)}`,
-        attendance_link: `https://attendance-${i}.example.com`,
-        discussion_results: '',
+        dress_code: ['Seragam Dinas', 'Pakaian Formal', 'Seragam Harian', 'Pakaian Rapi'][Math.floor(Math.random() * 4)],
+        agenda: `Agenda rapat ${indonesianMeetingTitles[i - 1]}`,
+        notes: `Catatan untuk rapat ${indonesianMeetingTitles[i - 1]}`,
+        discussion_results: Math.random() > 0.3 ? `Hasil rapat: Telah dibahas dan disepakati beberapa poin penting terkait operasional. Tindak lanjut akan dilaksanakan sesuai timeline yang telah ditetapkan.` : null,
         status: status,
         whatsapp_reminder_enabled: Math.random() > 0.2, // 80% chance of being true
         group_notification_enabled: Math.random() > 0.3, // 70% chance of being true

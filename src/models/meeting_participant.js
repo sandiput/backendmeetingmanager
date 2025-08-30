@@ -29,11 +29,7 @@ MeetingParticipant.init({
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE'
   },
-  attendance_status: {
-    type: DataTypes.ENUM('pending', 'present', 'absent', 'late'),
-    defaultValue: 'pending',
-    allowNull: false
-  },
+
   attendance_time: {
     type: DataTypes.DATE,
     allowNull: true

@@ -34,11 +34,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false
     },
-    attendance_status: {
-      type: DataTypes.ENUM('pending', 'present', 'late', 'absent'),
-      allowNull: true,
-      defaultValue: 'pending'
-    },
+
     arrival_time: {
       type: DataTypes.DATE,
       allowNull: true

@@ -1,5 +1,6 @@
 const { Meeting, Participant, MeetingParticipant, sequelize } = require("../models");
 const { Op, fn, col, literal } = require("sequelize");
+const { logDetailedAudit } = require("../middleware/auditLogger");
 
 class DashboardController {
   // Helper function to calculate date range based on period
@@ -63,6 +64,14 @@ class DashboardController {
         }),
       ]);
 
+      // Log audit for dashboard stats view
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'dashboard_stats',
+        description: 'Lihat Statistik Dashboard',
+        success: true
+      });
+
       res.json({
         success: true,
         data: {
@@ -74,6 +83,16 @@ class DashboardController {
       });
     } catch (error) {
       console.error("Error getting dashboard stats:", error);
+      
+      // Log audit for failed dashboard stats view
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'dashboard_stats',
+        description: 'Gagal Lihat Statistik Dashboard',
+        success: false,
+        error_message: error.message
+      });
+      
       res.status(500).json({
         success: false,
         message: "Error retrieving dashboard statistics",
@@ -140,12 +159,38 @@ class DashboardController {
         avg_participants: avgParticipants,
       };
 
+      // Log audit for review stats view
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'review_stats',
+        description: `Viewed review statistics for ${period} period`,
+        success: true
+      });
+
+      // Log audit for seksi stats view
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'seksi_stats',
+        description: `Viewed seksi statistics for ${period} period`,
+        success: true
+      });
+
       res.json({
         success: true,
         data: stats,
       });
     } catch (error) {
       console.error("Error getting review stats:", error);
+      
+      // Log audit for failed review stats view
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'review_stats',
+        description: 'Failed to view review statistics',
+        success: false,
+        error_message: error.message
+      });
+      
       res.status(500).json({
         success: false,
         message: "Error retrieving review statistics",
@@ -167,7 +212,7 @@ class DashboardController {
           p.seksi,
           COUNT(mp.meeting_id) as meeting_count,
           ROUND(
-            (COUNT(CASE WHEN mp.attendance_status = 'present' THEN 1 END) * 100.0 / 
+            (COUNT(mp.meeting_id) * 100.0 / 
              NULLIF(COUNT(mp.meeting_id), 0)), 2
           ) as attendance_rate
         FROM participants p
@@ -185,12 +230,30 @@ class DashboardController {
         }
       );
 
+      // Log audit for top participants view
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'top_participants',
+        description: `Viewed top participants for ${period} period`,
+        success: true
+      });
+
       res.json({
         success: true,
         data: participants,
       });
     } catch (error) {
       console.error("Error getting top participants:", error);
+      
+      // Log audit for failed top participants view
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'top_participants',
+        description: 'Failed to view top participants',
+        success: false,
+        error_message: error.message
+      });
+      
       res.status(500).json({
         success: false,
         message: "Error retrieving top participants",
@@ -212,7 +275,7 @@ class DashboardController {
           SUM(CASE WHEN p.is_active = true THEN 1 ELSE 0 END) as active_count,
           COUNT(DISTINCT m.id) as meeting_count,
           ROUND(
-            (COUNT(CASE WHEN mp.attendance_status = 'present' THEN 1 END) * 100.0 / 
+            (COUNT(mp.id) * 100.0 / 
              NULLIF(COUNT(mp.id), 0)), 2
           ) as attendance_rate
         FROM participants p
@@ -232,6 +295,16 @@ class DashboardController {
       });
     } catch (error) {
       console.error("Error getting seksi stats:", error);
+      
+      // Log audit for failed seksi stats view
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'seksi_stats',
+        description: 'Gagal Lihat Statistik Seksi',
+        success: false,
+        error_message: error.message
+      });
+      
       res.status(500).json({
         success: false,
         message: "Error retrieving seksi statistics",
@@ -316,12 +389,30 @@ class DashboardController {
         });
       }
 
+      // Log audit for meeting trends view
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'meeting_trends',
+        description: `Lihat Tren Meeting untuk periode ${period}`,
+        success: true
+      });
+
       res.json({
         success: true,
         data: trends,
       });
     } catch (error) {
       console.error("Error getting meeting trends:", error);
+      
+      // Log audit for failed meeting trends view
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'meeting_trends',
+        description: 'Gagal Lihat Tren Meeting',
+        success: false,
+        error_message: error.message
+      });
+      
       res.status(500).json({
         success: false,
         message: "Error retrieving meeting trends",
@@ -352,9 +443,7 @@ class DashboardController {
   async calculateOntimeRate() {
     const result = await MeetingParticipant.findOne({
       attributes: [[literal("COUNT(CASE WHEN arrival_time <= (SELECT start_time FROM meetings WHERE id = meeting_id) THEN 1 END) * 100.0 / COUNT(*)"), "rate"]],
-      where: {
-        attendance_status: "present",
-      },
+      where: {},
     });
     return result?.getDataValue("rate") || 0;
   }
@@ -364,7 +453,7 @@ class DashboardController {
       attributes: [
         [
           literal(
-            "COUNT(CASE WHEN reminder_sent_at IS NOT NULL AND EXISTS (SELECT 1 FROM meeting_participants WHERE meeting_id = Meeting.id AND attendance_status = 'present') THEN 1 END) * 100.0 / COUNT(CASE WHEN reminder_sent_at IS NOT NULL THEN 1 END)"
+            "COUNT(CASE WHEN reminder_sent_at IS NOT NULL AND EXISTS (SELECT 1 FROM meeting_participants WHERE meeting_id = Meeting.id) THEN 1 END) * 100.0 / COUNT(CASE WHEN reminder_sent_at IS NOT NULL THEN 1 END)"
           ),
           "rate",
         ],

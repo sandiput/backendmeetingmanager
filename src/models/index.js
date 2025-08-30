@@ -7,6 +7,7 @@ const Settings = require('./Settings');
 const MeetingParticipant = require('./MeetingParticipant');
 const MeetingFile = require('./MeetingFile');
 const NotificationLog = require('./NotificationLog');
+const AuditLog = require('./audit_log');
 
 // Define associations
 Meeting.belongsToMany(Participant, {
@@ -55,5 +56,6 @@ module.exports = {
   Settings,
   MeetingParticipant,
   MeetingFile,
-  NotificationLog
+  NotificationLog,
+  AuditLog
 };

@@ -1,5 +1,6 @@
 const { Participant, Meeting } = require("../models");
 const { Op } = require("sequelize");
+const { logDetailedAudit } = require("../middleware/auditLogger");
 
 class ParticipantController {
   // Get all participants with pagination
@@ -13,6 +14,14 @@ class ParticipantController {
         limit,
         offset,
         order: [["name", "ASC"]],
+      });
+
+      // Log audit for participants list view
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'participants',
+        description: `Retrieved participants list (page ${page}, ${rows.length} results)`,
+        success: true
       });
 
       res.json({
@@ -41,7 +50,7 @@ class ParticipantController {
           {
             model: Meeting,
             as: "meetings",
-            through: { attributes: ["attendance_status", "attendance_time"] },
+            through: { attributes: ["attendance_time"] },
           },
         ],
       });
@@ -52,6 +61,15 @@ class ParticipantController {
           message: "Participant not found",
         });
       }
+
+      // Log audit for participant read
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'participants',
+        record_id: participant.id,
+        description: `Lihat Detail Peserta: ${participant.name}`,
+        success: true
+      });
 
       res.json({
         success: true,
@@ -77,6 +95,17 @@ class ParticipantController {
       }
 
       const participant = await Participant.create(participantData);
+
+      // Log audit for participant creation
+      await logDetailedAudit(req, {
+        action_type: 'CREATE',
+        table_name: 'participants',
+        record_id: participant.id,
+        new_values: JSON.stringify(participant.toJSON()),
+        changed_fields: Object.keys(participantData).join(','),
+        description: `Buat Peserta Baru: ${participant.name}`,
+        success: true
+      });
 
       res.status(201).json({
         success: true,
@@ -129,8 +158,28 @@ class ParticipantController {
       }
       console.log("sebelum :", participant);
 
+      // Store old values for audit
+      const oldValues = { ...participant.dataValues };
+      
       await participant.update(updateData);
       console.log("sesudah :", participant);
+      
+      // Log audit for participant update
+      const changedFields = Object.keys(updateData).filter(key => 
+        oldValues[key] !== updateData[key]
+      );
+      
+      await logDetailedAudit(req, {
+        action_type: 'UPDATE',
+        table_name: 'participants',
+        record_id: participant.id,
+        old_values: JSON.stringify(oldValues),
+        new_values: JSON.stringify(participant.toJSON()),
+        changed_fields: changedFields.join(','),
+        description: `Ubah Peserta: ${participant.name}`,
+        success: true
+      });
+      
       res.json({
         success: true,
         data: participant,
@@ -172,7 +221,20 @@ class ParticipantController {
         });
       }
 
+      // Store participant data for audit before deletion
+      const deletedParticipantData = { ...participant.dataValues };
+      
       await participant.destroy();
+
+      // Log audit for participant deletion
+      await logDetailedAudit(req, {
+        action_type: 'DELETE',
+        table_name: 'participants',
+        record_id: req.params.id,
+        old_values: JSON.stringify(deletedParticipantData),
+        description: `Hapus Peserta: ${deletedParticipantData.name}`,
+        success: true
+      });
 
       res.json({
         success: true,
@@ -212,6 +274,14 @@ class ParticipantController {
         order: [["name", "ASC"]],
       });
 
+      // Log audit for participant search
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'participants',
+        description: `Searched participants with query: "${query || 'all'}" and seksi: "${seksi || 'all'}" (${rows.length} results)`,
+        success: true
+      });
+
       res.json({
         success: true,
         data: {
@@ -243,6 +313,14 @@ class ParticipantController {
         limit,
         offset,
         order: [["name", "ASC"]],
+      });
+
+      // Log audit for participants by seksi
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'participants',
+        description: `Retrieved participants by seksi: "${seksi}" (page ${page}, ${rows.length} results)`,
+        success: true
       });
 
       res.json({

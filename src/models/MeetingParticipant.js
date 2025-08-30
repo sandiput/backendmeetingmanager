@@ -25,11 +25,7 @@ MeetingParticipant.init({
       key: 'id'
     }
   },
-  attendance_status: {
-    type: DataTypes.ENUM('pending', 'present', 'late', 'absent'),
-    allowNull: false,
-    defaultValue: 'pending'
-  },
+
   arrival_time: {
     type: DataTypes.DATE,
     allowNull: true
@@ -58,9 +54,7 @@ MeetingParticipant.init({
     {
       fields: ['participant_id']
     },
-    {
-      fields: ['attendance_status']
-    },
+
     {
       fields: ['meeting_id', 'participant_id'],
       unique: true

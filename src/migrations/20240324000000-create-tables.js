@@ -1,47 +1,42 @@
 'use strict';
 
-const { DataTypes } = require('sequelize');
-
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  name: '20240324000000-create-tables',
-  async up({ context: sequelize }) {
-    const queryInterface = sequelize.getQueryInterface();
-
+  async up(queryInterface, Sequelize) {
     // Create participants table
     await queryInterface.createTable('participants', {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       name: {
-        type: DataTypes.STRING,
+        type: Sequelize.STRING,
         allowNull: false
       },
       whatsapp_number: {
-        type: DataTypes.STRING,
+        type: Sequelize.STRING,
         allowNull: false
       },
       nip: {
-        type: DataTypes.STRING,
+        type: Sequelize.STRING,
         allowNull: false,
         unique: true
       },
       seksi: {
-        type: DataTypes.STRING,
+        type: Sequelize.STRING,
         allowNull: false
       },
       is_active: {
-        type: DataTypes.BOOLEAN,
+        type: Sequelize.BOOLEAN,
         defaultValue: true
       },
       created_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       },
       updated_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       }
     });
@@ -49,82 +44,81 @@ module.exports = {
     // Create meetings table
     await queryInterface.createTable('meetings', {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       title: {
-        type: DataTypes.STRING,
+        type: Sequelize.STRING,
         allowNull: false
       },
       date: {
-        type: DataTypes.DATEONLY,
+        type: Sequelize.DATEONLY,
         allowNull: false
       },
       start_time: {
-        type: DataTypes.TIME,
+        type: Sequelize.TIME,
         allowNull: false
       },
       end_time: {
-        type: DataTypes.TIME,
-        allowNull: false
+        type: Sequelize.TIME
       },
       location: {
-        type: DataTypes.STRING,
+        type: Sequelize.STRING,
         allowNull: false
       },
       meeting_link: {
-        type: DataTypes.STRING
+        type: Sequelize.STRING
       },
       dress_code: {
-        type: DataTypes.STRING
+        type: Sequelize.STRING
       },
-      invitation_reference: {
-        type: DataTypes.STRING
+      agenda: {
+        type: Sequelize.STRING
       },
-      attendance_link: {
-        type: DataTypes.STRING
+      notes: {
+        type: Sequelize.STRING
       },
       discussion_results: {
-        type: DataTypes.TEXT
+        type: Sequelize.TEXT
       },
       status: {
-        type: DataTypes.ENUM('incoming', 'completed'),
+        type: Sequelize.ENUM('incoming', 'completed'),
         defaultValue: 'incoming'
       },
       whatsapp_reminder_enabled: {
-        type: DataTypes.BOOLEAN,
+        type: Sequelize.BOOLEAN,
         defaultValue: true
       },
       group_notification_enabled: {
-        type: DataTypes.BOOLEAN,
+        type: Sequelize.BOOLEAN,
         defaultValue: true
       },
       reminder_sent_at: {
-        type: DataTypes.DATE
+        type: Sequelize.DATE
       },
       group_notification_sent_at: {
-        type: DataTypes.DATE
+        type: Sequelize.DATE
       },
       created_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       },
       updated_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       }
     });
 
-    // Create meeting_participants (junction table)
+    // Create meeting_participants table
     await queryInterface.createTable('meeting_participants', {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       meeting_id: {
-        type: DataTypes.UUID,
+        type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'meetings',
@@ -134,7 +128,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       participant_id: {
-        type: DataTypes.UUID,
+        type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'participants',
@@ -144,15 +138,15 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       is_designated: {
-        type: DataTypes.BOOLEAN,
+        type: Sequelize.BOOLEAN,
         defaultValue: false
       },
       created_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       },
       updated_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       }
     });
@@ -160,47 +154,47 @@ module.exports = {
     // Create settings table
     await queryInterface.createTable('settings', {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       group_notification_time: {
-        type: DataTypes.TIME,
+        type: Sequelize.TIME,
         allowNull: false,
         defaultValue: '07:00'
       },
       group_notification_enabled: {
-        type: DataTypes.BOOLEAN,
+        type: Sequelize.BOOLEAN,
         defaultValue: true
       },
       individual_reminder_minutes: {
-        type: DataTypes.INTEGER,
+        type: Sequelize.INTEGER,
         allowNull: false,
         defaultValue: 30
       },
       individual_reminder_enabled: {
-        type: DataTypes.BOOLEAN,
+        type: Sequelize.BOOLEAN,
         defaultValue: true
       },
       whatsapp_connected: {
-        type: DataTypes.BOOLEAN,
+        type: Sequelize.BOOLEAN,
         defaultValue: false
       },
       updated_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       }
     });
 
-    // Create notification_logs table for tracking
+    // Create notification_logs table
     await queryInterface.createTable('notification_logs', {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       meeting_id: {
-        type: DataTypes.UUID,
+        type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'meetings',
@@ -210,7 +204,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       participant_id: {
-        type: DataTypes.UUID,
+        type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'participants',
@@ -220,27 +214,28 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       type: {
-        type: DataTypes.ENUM('individual_reminder', 'group_notification'),
+        type: Sequelize.ENUM('individual_reminder', 'group_notification'),
         allowNull: false
       },
       status: {
-        type: DataTypes.ENUM('success', 'failed'),
+        type: Sequelize.ENUM('success', 'failed'),
         allowNull: false
       },
       error_message: {
-        type: DataTypes.TEXT
+        type: Sequelize.TEXT
       },
       created_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       },
       updated_at: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: false
       }
     });
 
     // Add indexes
+    await queryInterface.addIndex('participants', ['whatsapp_number']);
     await queryInterface.addIndex('participants', ['nip']);
     await queryInterface.addIndex('participants', ['seksi']);
     await queryInterface.addIndex('meetings', ['date']);
@@ -252,9 +247,7 @@ module.exports = {
     await queryInterface.addIndex('notification_logs', ['type']);
   },
 
-  async down({ context: sequelize }) {
-    const queryInterface = sequelize.getQueryInterface();
-
+  async down(queryInterface, Sequelize) {
     // Drop tables in reverse order
     await queryInterface.dropTable('notification_logs');
     await queryInterface.dropTable('meeting_participants');
