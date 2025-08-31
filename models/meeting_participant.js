@@ -35,10 +35,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: false
     },
 
-    arrival_time: {
-      type: DataTypes.DATE,
-      allowNull: true
-    },
+
     notes: {
       type: DataTypes.TEXT,
       allowNull: true

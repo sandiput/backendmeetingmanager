@@ -44,14 +44,14 @@ class MeetingController {
 
         // Separate and sort meetings by status
         const upcomingMeetings = meetingsRaw
-          .filter(m => m.status === 'upcoming')
+          .filter((m) => m.status === "upcoming")
           .sort((a, b) => {
             if (a.date !== b.date) return new Date(a.date) - new Date(b.date);
             return a.start_time.localeCompare(b.start_time);
           });
-        
+
         const completedMeetings = meetingsRaw
-          .filter(m => m.status === 'completed')
+          .filter((m) => m.status === "completed")
           .sort((a, b) => {
             if (a.date !== b.date) return new Date(b.date) - new Date(a.date);
             return b.start_time.localeCompare(a.start_time);
@@ -59,7 +59,7 @@ class MeetingController {
 
         // Combine: upcoming first, then completed
         const sortedMeetings = [...upcomingMeetings, ...completedMeetings];
-        
+
         // Apply pagination to sorted results
         count = sortedMeetings.length;
         meetings = sortedMeetings.slice(offset, offset + limit);
@@ -88,10 +88,10 @@ class MeetingController {
 
       // Log audit for meetings list view
       await logDetailedAudit(req, {
-        action_type: 'READ',
-        table_name: 'meetings',
+        action_type: "READ",
+        table_name: "meetings",
         description: `Lihat Daftar Meeting (halaman ${page}, ${meetings.length} hasil)`,
-        success: true
+        success: true,
       });
 
       res.json({
@@ -138,14 +138,14 @@ class MeetingController {
       });
 
       // Log audit for upcoming meetings view
-       await logDetailedAudit(req, {
-         action_type: 'read',
-         table_name: 'meetings',
-         description: `Lihat Meeting Mendatang (${meetings.length} hasil)`,
-         success: true
-       });
+      await logDetailedAudit(req, {
+        action_type: "read",
+        table_name: "meetings",
+        description: `Lihat Meeting Mendatang (${meetings.length} hasil)`,
+        success: true,
+      });
 
-       res.json({
+      res.json({
         success: true,
         data: meetings,
       });
@@ -181,11 +181,11 @@ class MeetingController {
 
       // Log audit for meeting read
       await logDetailedAudit(req, {
-        action_type: 'READ',
-        table_name: 'meetings',
+        action_type: "READ",
+        table_name: "meetings",
         record_id: meeting.id,
         description: `Lihat Detail Meeting: ${meeting.title}`,
-        success: true
+        success: true,
       });
 
       res.json({
@@ -215,7 +215,10 @@ class MeetingController {
 
       // Find participants by name (if designated_attendees is provided)
       let participants = [];
-      if (req.body.designated_attendees && Array.isArray(req.body.designated_attendees)) {
+      if (
+        req.body.designated_attendees &&
+        Array.isArray(req.body.designated_attendees)
+      ) {
         participants = await Participant.findAll({
           where: {
             name: { [Op.in]: req.body.designated_attendees },
@@ -242,13 +245,13 @@ class MeetingController {
 
       // Log audit for meeting creation
       await logDetailedAudit(req, {
-        action_type: 'CREATE',
-        table_name: 'meetings',
+        action_type: "CREATE",
+        table_name: "meetings",
         record_id: meeting.id,
         new_values: JSON.stringify(meeting.toJSON()),
-        changed_fields: Object.keys(meetingData).join(','),
+        changed_fields: Object.keys(meetingData).join(","),
         description: `Buat Meeting Baru: ${meeting.title}`,
-        success: true
+        success: true,
       });
 
       res.status(201).json({
@@ -345,7 +348,7 @@ class MeetingController {
 
       // Store old values for audit
       const oldValues = { ...meeting.dataValues };
-      
+
       // Update meeting fields with explicit ID preservation
       updateData.id = meetingId; // Ensure ID is preserved
       await meeting.update(updateData);
@@ -363,19 +366,19 @@ class MeetingController {
       });
 
       // Log audit for meeting update
-      const changedFields = Object.keys(updateData).filter(key => 
-        key !== 'id' && oldValues[key] !== updateData[key]
+      const changedFields = Object.keys(updateData).filter(
+        (key) => key !== "id" && oldValues[key] !== updateData[key]
       );
-      
+
       await logDetailedAudit(req, {
-        action_type: 'UPDATE',
-        table_name: 'meetings',
+        action_type: "UPDATE",
+        table_name: "meetings",
         record_id: meeting.id,
         old_values: JSON.stringify(oldValues),
         new_values: JSON.stringify(meeting.toJSON()),
-        changed_fields: changedFields.join(','),
+        changed_fields: changedFields.join(","),
         description: `Ubah Meeting: ${meeting.title}`,
-        success: true
+        success: true,
       });
 
       res.json({
@@ -406,17 +409,17 @@ class MeetingController {
 
       // Store meeting data for audit before deletion
       const deletedMeetingData = { ...meeting.dataValues };
-      
+
       await meeting.destroy();
 
       // Log audit for meeting deletion
       await logDetailedAudit(req, {
-        action_type: 'DELETE',
-        table_name: 'meetings',
+        action_type: "DELETE",
+        table_name: "meetings",
         record_id: req.params.id,
         old_values: JSON.stringify(deletedMeetingData),
         description: `Hapus Meeting: ${deletedMeetingData.title}`,
-        success: true
+        success: true,
       });
 
       res.json({
@@ -456,10 +459,17 @@ class MeetingController {
       // Send reminder to all active participants
       for (const participant of meeting.participants) {
         // Format time for display (remove seconds if present)
-        const startTime = meeting.start_time.includes(":") ? meeting.start_time.split(":").slice(0, 2).join(":") : meeting.start_time;
-        const endTime = meeting.end_time.includes(":") ? meeting.end_time.split(":").slice(0, 2).join(":") : meeting.end_time;
+        const startTime = meeting.start_time.includes(":")
+          ? meeting.start_time.split(":").slice(0, 2).join(":")
+          : meeting.start_time;
+        const endTime = meeting.end_time.includes(":")
+          ? meeting.end_time.split(":").slice(0, 2).join(":")
+          : meeting.end_time;
 
-        await WhatsAppService.sendMessage(participant.whatsapp_number, `🔔 *Reminder Meeting*\n\n${meeting.title}\n📅 ${meeting.date}\n⏰ ${startTime} - ${endTime}\n📍 ${meeting.location}`);
+        await WhatsAppService.sendMessage(
+          participant.whatsapp_number,
+          `🔔 *Reminder Meeting*\n\n${meeting.title}\n📅 ${meeting.date}\n⏰ ${startTime} - ${endTime}\n📍 ${meeting.location}`
+        );
       }
 
       await meeting.update({ reminder_sent_at: new Date() });
@@ -490,7 +500,10 @@ class MeetingController {
 
       const meetings = await Meeting.findAll({
         where: {
-          [Op.or]: [{ title: { [Op.like]: `%${query}%` } }, { location: { [Op.like]: `%${query}%` } }],
+          [Op.or]: [
+            { title: { [Op.like]: `%${query}%` } },
+            { location: { [Op.like]: `%${query}%` } },
+          ],
         },
         order: [
           ["date", "ASC"],
@@ -514,25 +527,25 @@ class MeetingController {
       }
 
       // Log audit for meeting search
-        await logDetailedAudit(req, {
-          action_type: 'READ',
-          table_name: 'meetings',
-          description: `Searched meetings with query: "${query}" (${meetings.length} results)`,
-          success: true
-        });
+      await logDetailedAudit(req, {
+        action_type: "READ",
+        table_name: "meetings",
+        description: `Searched meetings with query: "${query}" (${meetings.length} results)`,
+        success: true,
+      });
 
-        res.json({
-          success: true,
-          data: meetings,
-        });
-      } catch (error) {
-        console.error("Error searching meetings:", error);
-        res.status(500).json({
-          success: false,
-          message: "Error searching meetings",
-        });
-      }
+      res.json({
+        success: true,
+        data: meetings,
+      });
+    } catch (error) {
+      console.error("Error searching meetings:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error searching meetings",
+      });
     }
   }
+}
 
-  module.exports = new MeetingController();
+module.exports = new MeetingController();

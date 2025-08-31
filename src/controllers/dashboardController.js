@@ -1,6 +1,7 @@
 const { Meeting, Participant, MeetingParticipant, sequelize } = require("../models");
 const { Op, fn, col, literal } = require("sequelize");
 const { logDetailedAudit } = require("../middleware/auditLogger");
+const XLSX = require('xlsx');
 
 class DashboardController {
   // Helper function to calculate date range based on period
@@ -117,7 +118,10 @@ class DashboardController {
         }),
         Meeting.count({
           where: {
-            date: { [Op.lt]: now },
+            date: {
+              [Op.between]: [startDate, endDate],
+              [Op.lt]: now
+            },
             status: "completed",
           },
         }),
@@ -138,8 +142,6 @@ class DashboardController {
 
       // Calculate additional statistics
       const avgDuration = await this.calculateAverageDuration(startDate, endDate);
-      const ontimeRate = await this.calculateOntimeRate();
-      const whatsappResponseRate = await this.calculateWhatsAppResponseRate();
       const whatsappNotifications = await Meeting.count({
         where: {
           [Op.or]: [{ reminder_sent_at: { [Op.not]: null } }, { group_notification_sent_at: { [Op.not]: null } }],
@@ -153,8 +155,6 @@ class DashboardController {
         active_participants: activeParticipants,
         avg_duration: avgDuration,
         whatsapp_notifications: whatsappNotifications,
-        ontime_rate: ontimeRate,
-        whatsapp_response_rate: whatsappResponseRate,
         completion_rate: (completedMeetings / totalMeetings) * 100 || 0,
         avg_participants: avgParticipants,
       };
@@ -273,11 +273,7 @@ class DashboardController {
           p.seksi,
           COUNT(p.id) as participant_count,
           SUM(CASE WHEN p.is_active = true THEN 1 ELSE 0 END) as active_count,
-          COUNT(DISTINCT m.id) as meeting_count,
-          ROUND(
-            (COUNT(mp.id) * 100.0 / 
-             NULLIF(COUNT(mp.id), 0)), 2
-          ) as attendance_rate
+          COUNT(DISTINCT m.id) as meeting_count
         FROM participants p
         LEFT JOIN meeting_participants mp ON p.id = mp.participant_id
         LEFT JOIN meetings m ON mp.meeting_id = m.id AND m.date BETWEEN ? AND ?
@@ -440,27 +436,287 @@ class DashboardController {
     return result?.getDataValue("avg_duration") || 0;
   }
 
-  async calculateOntimeRate() {
-    const result = await MeetingParticipant.findOne({
-      attributes: [[literal("COUNT(CASE WHEN arrival_time <= (SELECT start_time FROM meetings WHERE id = meeting_id) THEN 1 END) * 100.0 / COUNT(*)"), "rate"]],
-      where: {},
-    });
-    return result?.getDataValue("rate") || 0;
+  // Export Excel report
+  async exportExcel(req, res) {
+    try {
+      const { period = "monthly" } = req.query;
+      const { startDate, endDate } = this.getDateRange(period);
+      const now = new Date();
+
+      // Get all data for export
+      const [reviewStats, topParticipants, seksiStats, meetingTrends] = await Promise.all([
+        this.getReviewStatsData(period),
+        this.getTopParticipantsData(period),
+        this.getSeksiStatsData(period),
+        this.getMeetingTrendsData(period)
+      ]);
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+
+      // Sheet 1: Review Statistics
+      const statsData = [
+        ['Metric', 'Value'],
+        ['Total Meetings', reviewStats.total_meetings],
+        ['Completed Meetings', reviewStats.completed_meetings],
+        ['Active Participants', reviewStats.active_participants],
+        ['Average Duration (minutes)', Math.round(reviewStats.avg_duration)],
+        ['WhatsApp Notifications', reviewStats.whatsapp_notifications],
+        ['Completion Rate (%)', Math.round(reviewStats.completion_rate * 100) / 100],
+        ['Average Participants', Math.round(reviewStats.avg_participants * 100) / 100]
+      ];
+      const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
+      XLSX.utils.book_append_sheet(workbook, statsSheet, 'Statistics');
+
+      // Sheet 2: Top Participants
+      const participantsData = [
+        ['Name', 'Seksi', 'Meeting Count', 'Attendance Rate (%)']
+      ];
+      topParticipants.forEach(p => {
+        participantsData.push([p.name, p.seksi, p.meeting_count, p.attendance_rate]);
+      });
+      const participantsSheet = XLSX.utils.aoa_to_sheet(participantsData);
+      XLSX.utils.book_append_sheet(workbook, participantsSheet, 'Top Participants');
+
+      // Sheet 3: Seksi Statistics
+      const seksiData = [
+        ['Seksi', 'Participant Count', 'Active Count', 'Meeting Count']
+      ];
+      seksiStats.forEach(s => {
+        seksiData.push([s.seksi, s.participant_count, s.active_count, s.meeting_count]);
+      });
+      const seksiSheet = XLSX.utils.aoa_to_sheet(seksiData);
+      XLSX.utils.book_append_sheet(workbook, seksiSheet, 'Seksi Statistics');
+
+      // Sheet 4: Meeting Trends
+      const trendsData = [
+        ['Period', 'Meeting Count', 'Completion Rate (%)']
+      ];
+      meetingTrends.forEach(t => {
+        trendsData.push([t.period, t.count, Math.round(t.completion_rate * 100) / 100]);
+      });
+      const trendsSheet = XLSX.utils.aoa_to_sheet(trendsData);
+      XLSX.utils.book_append_sheet(workbook, trendsSheet, 'Meeting Trends');
+
+      // Generate Excel buffer
+      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      // Set response headers
+      const filename = `meeting-review-${period}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', excelBuffer.length);
+
+      // Log audit for Excel export
+      await logDetailedAudit(req, {
+        action_type: 'export',
+        table_name: 'review_export',
+        description: `Exported Excel report for ${period} period`,
+        success: true
+      });
+
+      // Send Excel file
+      res.send(excelBuffer);
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      
+      // Log audit for failed Excel export
+      await logDetailedAudit(req, {
+        action_type: 'export',
+        table_name: 'review_export',
+        description: 'Failed to export Excel report',
+        success: false,
+        error_message: error.message
+      });
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error exporting Excel report',
+      });
+    }
   }
 
-  async calculateWhatsAppResponseRate() {
-    const result = await Meeting.findOne({
-      attributes: [
-        [
-          literal(
-            "COUNT(CASE WHEN reminder_sent_at IS NOT NULL AND EXISTS (SELECT 1 FROM meeting_participants WHERE meeting_id = Meeting.id) THEN 1 END) * 100.0 / COUNT(CASE WHEN reminder_sent_at IS NOT NULL THEN 1 END)"
-          ),
-          "rate",
-        ],
-      ],
+  // Helper methods to get data for export
+  async getReviewStatsData(period) {
+    const { startDate, endDate } = this.getDateRange(period);
+    const now = new Date();
+
+    const [totalMeetings, completedMeetings, activeParticipants] = await Promise.all([
+      Meeting.count({
+        where: {
+          date: {
+            [Op.between]: [startDate, endDate],
+          },
+        },
+      }),
+      Meeting.count({
+        where: {
+          date: { [Op.lt]: now },
+          status: "completed",
+        },
+      }),
+      Participant.count({ where: { is_active: true } }),
+    ]);
+
+    const avgParticipantsResult = await sequelize.query(
+      `SELECT AVG(participant_count) as avg_participants 
+       FROM (
+         SELECT meeting_id, COUNT(participant_id) as participant_count 
+         FROM meeting_participants 
+         GROUP BY meeting_id
+       ) as meeting_counts`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    const avgParticipants = avgParticipantsResult[0]?.avg_participants || 0;
+
+    const avgDuration = await this.calculateAverageDuration(startDate, endDate);
+    const whatsappNotifications = await Meeting.count({
+      where: {
+        [Op.or]: [{ reminder_sent_at: { [Op.not]: null } }, { group_notification_sent_at: { [Op.not]: null } }],
+      },
     });
-    return result?.getDataValue("rate") || 0;
+
+    return {
+      total_meetings: totalMeetings,
+      completed_meetings: completedMeetings,
+      active_participants: activeParticipants,
+      avg_duration: avgDuration,
+      whatsapp_notifications: whatsappNotifications,
+      completion_rate: (completedMeetings / totalMeetings) * 100 || 0,
+      avg_participants: avgParticipants,
+    };
   }
+
+  async getTopParticipantsData(period) {
+    const { startDate, endDate } = this.getDateRange(period);
+
+    const [participants] = await sequelize.query(
+      `
+      SELECT 
+        p.id,
+        p.name,
+        p.seksi,
+        COUNT(mp.meeting_id) as meeting_count,
+        ROUND(
+          (COUNT(mp.meeting_id) * 100.0 / 
+           NULLIF(COUNT(mp.meeting_id), 0)), 2
+        ) as attendance_rate
+      FROM participants p
+      LEFT JOIN meeting_participants mp ON p.id = mp.participant_id
+      LEFT JOIN meetings m ON mp.meeting_id = m.id
+      WHERE p.is_active = true
+        AND (m.date IS NULL OR m.date BETWEEN ? AND ?)
+      GROUP BY p.id, p.name, p.seksi
+      HAVING COUNT(mp.meeting_id) > 0
+      ORDER BY meeting_count DESC
+      LIMIT 10
+    `,
+      {
+        replacements: [startDate, endDate],
+      }
+    );
+
+    return participants;
+  }
+
+  async getSeksiStatsData(period) {
+    const { startDate, endDate } = this.getDateRange(period);
+
+    const [stats] = await sequelize.query(
+      `
+      SELECT 
+        p.seksi,
+        COUNT(p.id) as participant_count,
+        SUM(CASE WHEN p.is_active = true THEN 1 ELSE 0 END) as active_count,
+        COUNT(DISTINCT m.id) as meeting_count
+      FROM participants p
+      LEFT JOIN meeting_participants mp ON p.id = mp.participant_id
+      LEFT JOIN meetings m ON mp.meeting_id = m.id AND m.date BETWEEN ? AND ?
+      GROUP BY p.seksi
+      ORDER BY p.seksi
+    `,
+      {
+        replacements: [startDate, endDate],
+      }
+    );
+
+    return stats;
+  }
+
+  async getMeetingTrendsData(period) {
+    const now = new Date();
+    const trends = [];
+
+    let intervals, periodCount, periodLabel;
+
+    switch (period) {
+      case "weekly":
+        intervals = 7;
+        periodCount = 1;
+        periodLabel = "Day";
+        break;
+      case "yearly":
+        intervals = 12;
+        periodCount = 30;
+        periodLabel = "Month";
+        break;
+      case "monthly":
+      default:
+        intervals = 12;
+        periodCount = 7;
+        periodLabel = "Week";
+        break;
+    }
+
+    for (let i = intervals - 1; i >= 0; i--) {
+      let periodStart, periodEnd;
+
+      if (period === "weekly") {
+        periodStart = new Date(now);
+        periodStart.setDate(now.getDate() - i);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd = new Date(periodStart);
+        periodEnd.setHours(23, 59, 59, 999);
+      } else if (period === "yearly") {
+        periodStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        periodEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
+      } else {
+        periodStart = new Date(now);
+        periodStart.setDate(now.getDate() - i * 7);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd = new Date(periodStart);
+        periodEnd.setDate(periodStart.getDate() + 6);
+        periodEnd.setHours(23, 59, 59, 999);
+      }
+
+      const [meetings, completedMeetings] = await Promise.all([
+        Meeting.count({
+          where: {
+            date: {
+              [Op.between]: [periodStart, periodEnd],
+            },
+          },
+        }),
+        Meeting.count({
+          where: {
+            date: {
+              [Op.between]: [periodStart, periodEnd],
+            },
+            status: "completed",
+          },
+        }),
+      ]);
+
+      trends.push({
+        period: `${periodLabel} ${intervals - i}`,
+        count: meetings,
+        completion_rate: meetings > 0 ? (completedMeetings / meetings) * 100 : 0,
+      });
+    }
+
+    return trends;
+  }
+
 }
 
 module.exports = new DashboardController();

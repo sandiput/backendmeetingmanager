@@ -84,8 +84,6 @@ Backend API untuk aplikasi Meeting Manager menggunakan Express.js dan MySQL.
 - `id` - Primary key
 - `meeting_id` - Foreign key ke meetings
 - `participant_id` - Foreign key ke participants
-
-- `arrival_time` - Waktu kedatangan
 - `notes` - Catatan (opsional)
 
 ### Tabel `meeting_files`
