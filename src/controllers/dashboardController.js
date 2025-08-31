@@ -5,11 +5,24 @@ const XLSX = require('xlsx');
 
 class DashboardController {
   // Helper function to calculate date range based on period
-  getDateRange(period = "monthly") {
+  getDateRange(period = "monthly", customStartDate = null, customEndDate = null) {
     const now = new Date();
     let startDate, endDate;
 
     switch (period) {
+      case "custom":
+        // Custom date range
+        if (customStartDate && customEndDate) {
+          startDate = new Date(customStartDate);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(customEndDate);
+          endDate.setHours(23, 59, 59, 999);
+        } else {
+          // Fallback to monthly if custom dates not provided
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        }
+        break;
       case "weekly":
         // Current week (Monday to Sunday)
         const dayOfWeek = now.getDay();
@@ -104,8 +117,8 @@ class DashboardController {
   // Get review statistics
   async getReviewStats(req, res) {
     try {
-      const { period = "monthly" } = req.query;
-      const { startDate, endDate } = this.getDateRange(period);
+      const { period = "monthly", startDate: customStartDate, endDate: customEndDate } = req.query;
+      const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
       const now = new Date();
 
       const [totalMeetings, completedMeetings, activeParticipants] = await Promise.all([
@@ -201,8 +214,8 @@ class DashboardController {
   // Get top participants
   async getTopParticipants(req, res) {
     try {
-      const { period = "monthly" } = req.query;
-      const { startDate, endDate } = this.getDateRange(period);
+      const { period = "monthly", startDate: customStartDate, endDate: customEndDate } = req.query;
+      const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
 
       const [participants] = await sequelize.query(
         `
@@ -264,8 +277,8 @@ class DashboardController {
   // Get seksi statistics
   async getSeksiStats(req, res) {
     try {
-      const { period = "monthly" } = req.query;
-      const { startDate, endDate } = this.getDateRange(period);
+      const { period = "monthly", startDate: customStartDate, endDate: customEndDate } = req.query;
+      const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
 
       const [stats] = await sequelize.query(
         `
@@ -439,16 +452,16 @@ class DashboardController {
   // Export Excel report
   async exportExcel(req, res) {
     try {
-      const { period = "monthly" } = req.query;
-      const { startDate, endDate } = this.getDateRange(period);
+      const { period = "monthly", startDate: customStartDate, endDate: customEndDate } = req.query;
+      const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
       const now = new Date();
 
       // Get all data for export
       const [reviewStats, topParticipants, seksiStats, meetingTrends] = await Promise.all([
-        this.getReviewStatsData(period),
-        this.getTopParticipantsData(period),
-        this.getSeksiStatsData(period),
-        this.getMeetingTrendsData(period)
+        this.getReviewStatsData(period, customStartDate, customEndDate),
+        this.getTopParticipantsData(period, customStartDate, customEndDate),
+        this.getSeksiStatsData(period, customStartDate, customEndDate),
+        this.getMeetingTrendsData(period, customStartDate, customEndDate)
       ]);
 
       // Create workbook
@@ -537,8 +550,8 @@ class DashboardController {
   }
 
   // Helper methods to get data for export
-  async getReviewStatsData(period) {
-    const { startDate, endDate } = this.getDateRange(period);
+  async getReviewStatsData(period, customStartDate = null, customEndDate = null) {
+    const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
     const now = new Date();
 
     const [totalMeetings, completedMeetings, activeParticipants] = await Promise.all([
@@ -587,8 +600,8 @@ class DashboardController {
     };
   }
 
-  async getTopParticipantsData(period) {
-    const { startDate, endDate } = this.getDateRange(period);
+  async getTopParticipantsData(period, customStartDate = null, customEndDate = null) {
+    const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
 
     const [participants] = await sequelize.query(
       `
@@ -619,8 +632,8 @@ class DashboardController {
     return participants;
   }
 
-  async getSeksiStatsData(period) {
-    const { startDate, endDate } = this.getDateRange(period);
+  async getSeksiStatsData(period, customStartDate = null, customEndDate = null) {
+    const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
 
     const [stats] = await sequelize.query(
       `
@@ -643,7 +656,7 @@ class DashboardController {
     return stats;
   }
 
-  async getMeetingTrendsData(period) {
+  async getMeetingTrendsData(period, customStartDate = null, customEndDate = null) {
     const now = new Date();
     const trends = [];
 
