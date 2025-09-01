@@ -16,9 +16,8 @@ class SettingsController {
           whatsapp_api_url: '',
           whatsapp_group_id: '',
           notification_templates: {
-            reminder: 'Reminder: {meeting_title} akan dimulai pada {meeting_time}',
-            confirmation: 'Konfirmasi kehadiran Anda untuk {meeting_title}',
-            summary: 'Ringkasan rapat {meeting_title}: {summary}'
+            group_daily: '🗓️ _Jadwal Meeting Hari Ini_\n📅 {date}\n\n{meetings}\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen',
+            individual_reminder: '⏰ _Meeting Reminder_\n\n📋 _{title}_\n📅 {date}\n⏰ {start_time} - {end_time}\n📍 {location}\n{meeting_link}\n{dress_code}\n{attendance_link}\n\nHarap bersiap dan datang tepat waktu.\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen'
           }
         });
       }
@@ -66,9 +65,8 @@ class SettingsController {
           whatsapp_api_url: '',
           whatsapp_group_id: '',
           notification_templates: {
-            reminder: 'Reminder: {meeting_title} akan dimulai pada {meeting_time}',
-            confirmation: 'Konfirmasi kehadiran Anda untuk {meeting_title}',
-            summary: 'Ringkasan rapat {meeting_title}: {summary}'
+            group_daily: '🗓️ _Jadwal Meeting Hari Ini_\n📅 {date}\n\n{meetings}\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen',
+            individual_reminder: '⏰ _Meeting Reminder_\n\n📋 _{title}_\n📅 {date}\n⏰ {start_time} - {end_time}\n📍 {location}\n{meeting_link}\n{dress_code}\n{attendance_link}\n\nHarap bersiap dan datang tepat waktu.\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen'
           }
         }
       });

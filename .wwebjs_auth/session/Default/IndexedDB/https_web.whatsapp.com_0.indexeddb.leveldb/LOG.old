@@ -1,14 +1,13 @@
-2025/09/01-16:49:06.841 7e68 Reusing MANIFEST C:\xampp\htdocs\routes\backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2025/09/01-16:49:06.841 7e68 Recovering log #125
-2025/09/01-16:49:06.852 7e68 Reusing old log C:\xampp\htdocs\routes\backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000125.log 
-2025/09/01-16:49:06.852 7e68 Delete type=2 #123
-2025/09/01-16:49:10.931 72dc Level-0 table #130: started
-2025/09/01-16:49:10.935 72dc Level-0 table #130: 134830 bytes OK
-2025/09/01-16:49:10.936 72dc Delete type=0 #125
-2025/09/01-16:49:10.936 72dc Manual compaction at level-0 from '\x00:\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00;\x00\x00\x00' @ 0 : 0; will stop at '\x00:\x00\x00\x05' @ 169002 : 1
-2025/09/01-16:49:10.936 72dc Compacting 1@0 + 1@1 files
-2025/09/01-16:49:10.998 72dc Generated table #131@0: 71032 keys, 1469363 bytes
-2025/09/01-16:49:10.998 72dc Compacted 1@0 + 1@1 files => 1469363 bytes
-2025/09/01-16:49:10.998 72dc compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/09/01-16:49:10.999 72dc Delete type=2 #130
-2025/09/01-16:49:10.999 72dc Manual compaction at level-0 from '\x00:\x00\x00\x05' @ 169002 : 1 .. '\x00;\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/09/01-20:04:22.152 66e0 Reusing MANIFEST C:\xampp\htdocs\routes\backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/09/01-20:04:22.152 66e0 Recovering log #158
+2025/09/01-20:04:22.198 66e0 Reusing old log C:\xampp\htdocs\routes\backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000158.log 
+2025/09/01-20:04:23.654 16a0 Level-0 table #163: started
+2025/09/01-20:04:23.664 16a0 Level-0 table #163: 231413 bytes OK
+2025/09/01-20:04:23.664 16a0 Delete type=0 #158
+2025/09/01-20:04:23.665 16a0 Manual compaction at level-0 from '\x00H\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00I\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/09/01-20:04:25.263 7b3c Compacting 1@1 + 1@2 files
+2025/09/01-20:04:25.303 7b3c Generated table #164@1: 43627 keys, 1431725 bytes
+2025/09/01-20:04:25.303 7b3c Compacted 1@1 + 1@2 files => 1431725 bytes
+2025/09/01-20:04:25.304 7b3c compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/09/01-20:04:25.304 7b3c Delete type=2 #160
+2025/09/01-20:04:25.304 7b3c Delete type=2 #163
