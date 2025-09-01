@@ -1,7 +1,7 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const Meeting = require('../models/Meeting');
-const Settings = require('../models/Settings');
-const Participant = require('../models/Participant');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
+const { Meeting, Settings, Participant } = require('../models');
+const { Op } = require('sequelize');
 
 class WhatsAppService {
   constructor() {
@@ -20,19 +20,32 @@ class WhatsAppService {
     });
 
     this.client.on('qr', (qr) => {
-      console.log('QR Code received:', qr);
+      console.log('\n📱 Scan QR Code dengan WhatsApp Anda:');
+      qrcode.generate(qr, { small: true });
+      console.log('\n⚠️  QR Code akan expired dalam 20 detik. Scan sekarang!');
     });
 
-    this.client.on('ready', () => {
+    this.client.on('ready', async () => {
       console.log('WhatsApp client is ready!');
       this.isInitialized = true;
       this.updateWhatsAppStatus(true);
+      
+      // List all groups the bot is part of
+      await this.listAvailableGroups();
     });
 
     this.client.on('disconnected', () => {
       console.log('WhatsApp client disconnected');
       this.isInitialized = false;
       this.updateWhatsAppStatus(false);
+    });
+
+    // Listen for when bot is added to new groups
+    this.client.on('group_join', async (notification) => {
+      console.log('\n🎉 Bot ditambahkan ke grup baru!');
+      console.log('Group ID:', notification.chatId);
+      console.log('Group Name:', notification.body);
+      console.log('\n💡 Gunakan Group ID ini untuk konfigurasi notifikasi grup.');
     });
 
     await this.client.initialize();
@@ -86,32 +99,70 @@ class WhatsAppService {
 
   async sendDailyGroupNotifications() {
     try {
+      console.log('📋 Starting sendDailyGroupNotifications...');
+      
       const settings = await Settings.findOne();
-      if (!settings?.group_notification_enabled) return;
+      console.log('⚙️ Settings loaded:', {
+        group_notification_enabled: settings?.group_notification_enabled,
+        whatsapp_group_id: settings?.whatsapp_group_id
+      });
+      
+      if (!settings?.group_notification_enabled) {
+        console.log('❌ Group notifications disabled, returning');
+        return;
+      }
 
+      // Use local date to avoid timezone issues
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      console.log('📅 Looking for meetings on:', dateStr, '(local date)');
+      console.log('📅 Current date object:', today.toString());
 
-      const meetings = await Meeting.find({
-        date: today.toISOString().split('T')[0],
-        group_notification_enabled: true
-      }).sort('start_time');
+      const meetings = await Meeting.findAll({
+        where: {
+          date: dateStr,
+          group_notification_enabled: true
+        },
+        order: [['start_time', 'ASC']]
+      });
 
-      if (meetings.length === 0) return;
+      console.log(`📊 Found ${meetings.length} meetings for today`);
+      meetings.forEach(m => {
+        console.log(`   - ${m.title}: group_sent_at=${m.group_notification_sent_at}`);
+      });
+
+      if (meetings.length === 0) {
+        console.log('❌ No meetings found, returning');
+        return;
+      }
 
       const message = settings.formatGroupMessage(meetings);
+      console.log('💬 Formatted message length:', message.length);
+      
+      console.log('📱 Calling sendGroupMessage...');
       await this.sendGroupMessage(message);
+      console.log('✅ sendGroupMessage completed successfully');
 
       // Update notification status
+      console.log('💾 Updating meeting notification status...');
       await Promise.all(meetings.map(async (meeting) => {
+        const oldValue = meeting.group_notification_sent_at;
         meeting.group_notification_sent_at = new Date();
         await meeting.save();
+        console.log(`   ✅ Updated ${meeting.title}: ${oldValue} -> ${meeting.group_notification_sent_at}`);
       }));
 
+      console.log('💾 Updating settings last_group_notification...');
       settings.last_group_notification = new Date();
       await settings.save();
+      console.log('✅ Settings updated successfully');
+      
+      console.log('🎉 sendDailyGroupNotifications completed successfully');
     } catch (error) {
-      console.error('Error sending daily group notifications:', error);
+      console.error('❌ Error sending daily group notifications:', error);
       throw error;
     }
   }
@@ -124,13 +175,15 @@ class WhatsAppService {
       const now = new Date();
       const reminderTime = new Date(now.getTime() + settings.individual_reminder_minutes * 60000);
 
-      const meetings = await Meeting.find({
-        date: now.toISOString().split('T')[0],
-        whatsapp_reminder_enabled: true,
-        reminder_sent_at: null,
-        start_time: {
-          $gte: now.toISOString().split('T')[1].substring(0, 8),
-          $lte: reminderTime.toISOString().split('T')[1].substring(0, 8)
+      const meetings = await Meeting.findAll({
+        where: {
+          date: now.toISOString().split('T')[0],
+          whatsapp_reminder_enabled: true,
+          reminder_sent_at: null,
+          start_time: {
+            [Op.gte]: now.toISOString().split('T')[1].substring(0, 8),
+            [Op.lte]: reminderTime.toISOString().split('T')[1].substring(0, 8)
+          }
         }
       });
 
@@ -149,11 +202,44 @@ class WhatsAppService {
           }
         }
 
-        meeting.reminder_sent_at = new Date();
-        await meeting.save();
+        await meeting.update({
+          reminder_sent_at: new Date()
+        });
       }
     } catch (error) {
       console.error('Error checking and sending meeting reminders:', error);
+      throw error;
+    }
+  }
+
+  async listAvailableGroups() {
+    if (!this.isInitialized) {
+      throw new Error('WhatsApp client not initialized');
+    }
+
+    try {
+      const chats = await this.client.getChats();
+      const groups = chats.filter(chat => chat.isGroup);
+      
+      if (groups.length > 0) {
+        console.log('\n📋 Daftar Grup yang Bot Ikuti:');
+        console.log('=' .repeat(50));
+        groups.forEach((group, index) => {
+          console.log(`${index + 1}. ${group.name}`);
+          console.log(`   ID: ${group.id._serialized}`);
+          console.log(`   Participants: ${group.participants.length} members`);
+          console.log('-'.repeat(40));
+        });
+        console.log('\n💡 Copy Group ID di atas untuk konfigurasi notifikasi grup.');
+        console.log('💡 Gunakan endpoint POST /api/settings/whatsapp-group dengan group_id.');
+      } else {
+        console.log('\n❌ Bot belum bergabung dengan grup manapun.');
+        console.log('💡 Tambahkan bot ke grup WhatsApp terlebih dahulu.');
+      }
+      
+      return groups;
+    } catch (error) {
+      console.error('Error listing groups:', error);
       throw error;
     }
   }

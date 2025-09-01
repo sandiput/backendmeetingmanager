@@ -35,9 +35,18 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   
   // Initialize scheduled jobs
   ScheduledJobs.initializeJobs();
+  
+  // Initialize WhatsApp service
+  try {
+    const WhatsAppService = require('./services/whatsappService');
+    console.log('🔄 Initializing WhatsApp service...');
+    await WhatsAppService.initialize();
+  } catch (error) {
+    console.error('❌ WhatsApp initialization error:', error);
+  }
 });

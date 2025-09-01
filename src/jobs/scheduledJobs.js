@@ -1,6 +1,6 @@
 const cron = require('node-cron');
-const Meeting = require('../models/Meeting');
-const Settings = require('../models/Settings');
+const { Meeting } = require('../models');
+const { Settings } = require('../models');
 const WhatsAppService = require('../services/whatsappService');
 
 class ScheduledJobs {
@@ -29,10 +29,12 @@ class ScheduledJobs {
         const todayStr = today.toISOString().split('T')[0];
 
         // Get today's meetings
-        const meetings = await Meeting.find({
-          date: todayStr,
-          group_notification_sent_at: { $exists: false }
-        }).populate('attendees');
+        const meetings = await Meeting.findAll({
+          where: {
+            date: todayStr,
+            group_notification_sent_at: null
+          }
+        });
 
         if (meetings.length === 0) {
           console.log('No meetings found for today');
@@ -40,12 +42,16 @@ class ScheduledJobs {
         }
 
         // Send group notification
-        await WhatsAppService.sendDailyGroupNotification(meetings);
+        await WhatsAppService.sendDailyGroupNotifications();
 
         // Update meetings to mark notification as sent
-        await Meeting.updateMany(
-          { _id: { $in: meetings.map(m => m._id) } },
-          { group_notification_sent_at: new Date() }
+        await Meeting.update(
+          { group_notification_sent_at: new Date() },
+          { 
+            where: { 
+              id: meetings.map(m => m.id) 
+            } 
+          }
         );
 
         console.log(`Daily group notification sent for ${meetings.length} meetings`);
@@ -74,11 +80,13 @@ class ScheduledJobs {
         const todayStr = now.toISOString().split('T')[0];
 
         // Get upcoming meetings that need reminders
-        const meetings = await Meeting.find({
-          date: todayStr,
-          reminder_sent_at: { $exists: false },
-          time: { $exists: true }
-        }).populate('attendees');
+        const meetings = await Meeting.findAll({
+          where: {
+            date: todayStr,
+            reminder_sent_at: null,
+            whatsapp_reminder_enabled: true
+          }
+        });
 
         for (const meeting of meetings) {
           try {

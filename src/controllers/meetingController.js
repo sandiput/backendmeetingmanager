@@ -1,4 +1,4 @@
-const { Meeting, Participant } = require("../models");
+const { Meeting, Participant, Settings } = require("../models");
 const WhatsAppService = require("../services/whatsappService");
 const { validationResult } = require("express-validator");
 const { Op, DataTypes } = require("sequelize");
@@ -438,6 +438,8 @@ class MeetingController {
   // Send WhatsApp reminder
   async sendReminder(req, res) {
     try {
+      const { sendToAttendee = true, sendToGroup = false } = req.body;
+      
       const meeting = await Meeting.findByPk(req.params.id, {
         include: [
           {
@@ -456,33 +458,85 @@ class MeetingController {
         });
       }
 
-      // Send reminder to all active participants
-      for (const participant of meeting.participants) {
-        // Format time for display (remove seconds if present)
-        const startTime = meeting.start_time.includes(":")
-          ? meeting.start_time.split(":").slice(0, 2).join(":")
-          : meeting.start_time;
-        const endTime = meeting.end_time.includes(":")
-          ? meeting.end_time.split(":").slice(0, 2).join(":")
-          : meeting.end_time;
+      let sentCount = 0;
+      const results = [];
 
-        await WhatsAppService.sendMessage(
-          participant.whatsapp_number,
-          `🔔 *Reminder Meeting*\n\n${meeting.title}\n📅 ${meeting.date}\n⏰ ${startTime} - ${endTime}\n📍 ${meeting.location}`
-        );
+      // Send reminder to individual participants if requested
+      if (sendToAttendee && meeting.participants.length > 0) {
+        for (const participant of meeting.participants) {
+          try {
+            // Format time for display (remove seconds if present)
+            const startTime = meeting.start_time.includes(":")
+              ? meeting.start_time.split(":").slice(0, 2).join(":")
+              : meeting.start_time;
+            const endTime = meeting.end_time.includes(":")
+              ? meeting.end_time.split(":").slice(0, 2).join(":")
+              : meeting.end_time;
+
+            await WhatsAppService.sendMessage(
+              participant.whatsapp_number,
+              `🔔 *Reminder Meeting*\n\n${meeting.title}\n📅 ${meeting.date}\n⏰ ${startTime} - ${endTime}\n📍 ${meeting.location}`
+            );
+            sentCount++;
+            results.push(`Individual reminder sent to ${participant.name}`);
+          } catch (error) {
+            console.error(`Error sending reminder to ${participant.name}:`, error);
+            results.push(`Failed to send reminder to ${participant.name}`);
+          }
+        }
+        
+        await meeting.update({ reminder_sent_at: new Date() });
       }
 
-      await meeting.update({ reminder_sent_at: new Date() });
+      // Send reminder to WhatsApp group if requested
+      if (sendToGroup) {
+        try {
+          const settings = await Settings.findOne();
+          
+          if (settings && settings.whatsapp_group_id) {
+            // Format time for display
+            const startTime = meeting.start_time.includes(":")
+              ? meeting.start_time.split(":").slice(0, 2).join(":")
+              : meeting.start_time;
+            const endTime = meeting.end_time.includes(":")
+              ? meeting.end_time.split(":").slice(0, 2).join(":")
+              : meeting.end_time;
+
+            const groupMessage = `🔔 *Reminder Meeting*\n\n📋 ${meeting.title}\n📅 ${meeting.date}\n⏰ ${startTime} - ${endTime}\n📍 ${meeting.location}\n\n📱 Pesan otomatis dari Meeting Manager`;
+            
+            await WhatsAppService.sendGroupMessage(groupMessage);
+            sentCount++;
+            results.push('Group reminder sent successfully');
+            
+            await meeting.update({ group_notification_sent_at: new Date() });
+          } else {
+            results.push('Group reminder failed: WhatsApp group not configured');
+          }
+        } catch (error) {
+          console.error('Error sending group reminder:', error);
+          results.push('Group reminder failed: ' + error.message);
+        }
+      }
+
+      if (sentCount === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No reminders were sent. Please check your settings.",
+          details: results
+        });
+      }
 
       res.json({
         success: true,
-        message: "Reminder sent successfully",
+        message: `Reminder sent successfully (${sentCount} ${sentCount === 1 ? 'recipient' : 'recipients'})`,
+        details: results
       });
     } catch (error) {
       console.error("Error sending reminder:", error);
       res.status(500).json({
         success: false,
         message: "Error sending reminder",
+        error: error.message
       });
     }
   }

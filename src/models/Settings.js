@@ -4,7 +4,10 @@ const { sequelize } = require('../config/database');
 class Settings extends Model {
   formatGroupMessage(meetings) {
     let meetingsText = meetings.map((meeting, index) => {
-      return `${index + 1}. _${meeting.title}_\n⏰ ${meeting.start_time} - ${meeting.end_time}\n📍 ${meeting.location}\n👥 ${meeting.designated_attendees.join(', ')}${meeting.dress_code ? `\n👔 ${meeting.dress_code}` : ''}`;
+      const attendees = meeting.designated_attendees && Array.isArray(meeting.designated_attendees) 
+        ? meeting.designated_attendees.join(', ') 
+        : 'Semua peserta';
+      return `${index + 1}. _${meeting.title}_\n⏰ ${meeting.start_time} - ${meeting.end_time}\n📍 ${meeting.location}\n👥 ${attendees}${meeting.dress_code ? `\n👔 ${meeting.dress_code}` : ''}`;
     }).join('\n\n');
 
     return this.notification_templates.group_daily
@@ -89,6 +92,18 @@ Settings.init({
     defaultValue: {
       group_daily: '🗓️ _Jadwal Meeting Hari Ini_\n📅 {date}\n\n{meetings}\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen',
       individual_reminder: '⏰ _Meeting Reminder_\n\n📋 _{title}_\n📅 {date}\n⏰ {start_time} - {end_time}\n📍 {location}\n{meeting_link}\n{dress_code}\n{attendance_link}\n\nHarap bersiap dan datang tepat waktu.\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen'
+    },
+    get() {
+      const rawValue = this.getDataValue('notification_templates');
+      if (typeof rawValue === 'string') {
+        try {
+          return JSON.parse(rawValue);
+        } catch (e) {
+          console.error('Error parsing notification_templates:', e);
+          return this.constructor.rawAttributes.notification_templates.defaultValue;
+        }
+      }
+      return rawValue;
     }
   }
 }, {

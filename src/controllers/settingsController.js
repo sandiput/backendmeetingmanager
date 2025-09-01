@@ -217,6 +217,55 @@ class SettingsController {
     }
   }
 
+  // Get available WhatsApp groups
+  async getWhatsAppGroups(req, res) {
+    try {
+      const whatsappService = require('../services/whatsappService');
+      
+      if (!whatsappService.isInitialized) {
+        return res.status(400).json({
+          success: false,
+          message: 'WhatsApp client not initialized. Please scan QR code first.'
+        });
+      }
+
+      const groups = await whatsappService.listAvailableGroups();
+      
+      // Log audit for groups view
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'settings',
+        description: 'Retrieved available WhatsApp groups',
+        success: true
+      });
+
+      res.json({
+        success: true,
+        data: groups.map(group => ({
+          id: group.id._serialized,
+          name: group.name,
+          participants: group.participants.length
+        }))
+      });
+    } catch (error) {
+      console.error('Error getting WhatsApp groups:', error);
+      
+      // Log audit for failed groups retrieval
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'settings',
+        description: 'Failed to retrieve WhatsApp groups',
+        success: false,
+        error_message: error.message
+      });
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error retrieving WhatsApp groups'
+      });
+    }
+  }
+
   // Set WhatsApp group
   async setWhatsAppGroup(req, res) {
     try {
@@ -263,6 +312,168 @@ class SettingsController {
       res.status(500).json({
         success: false,
         message: 'Error setting WhatsApp group'
+      });
+    }
+  }
+
+  // Preview group message
+  async previewGroupMessage(req, res) {
+    try {
+      const { date } = req.query;
+      const { Meeting } = require('../models');
+      
+      // Get settings for formatting
+      const settings = await Settings.findOne();
+      if (!settings) {
+        return res.status(404).json({
+          success: false,
+          message: 'Settings not found'
+        });
+      }
+
+      // Get meetings for the specified date
+      const meetings = await Meeting.findAll({
+        where: {
+          date: date,
+          group_notification_enabled: true
+        },
+        order: [['start_time', 'ASC']]
+      });
+
+      // Format the group message using Settings model method
+      const message = settings.formatGroupMessage(meetings);
+
+      // Log audit for preview
+      await logDetailedAudit(req, {
+        action_type: 'READ',
+        table_name: 'settings',
+        description: `Previewed group message for date: ${date}`,
+        success: true
+      });
+
+      res.json({
+        success: true,
+        data: {
+          message: message,
+          meetings: meetings
+        }
+      });
+    } catch (error) {
+      console.error('Error previewing group message:', error);
+      
+      // Log audit for failed preview
+      await logDetailedAudit(req, {
+        action_type: 'read',
+        table_name: 'settings',
+        description: 'Failed to preview group message',
+        success: false,
+        error_message: error.message
+      });
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error previewing group message'
+      });
+    }
+  }
+
+  // Send test group message
+  async sendTestGroupMessage(req, res) {
+    try {
+      const { date } = req.body;
+      const whatsappService = require('../services/whatsappService');
+      
+      // Check if WhatsApp is connected
+      if (!whatsappService.isInitialized) {
+        return res.status(400).json({
+          success: false,
+          message: 'WhatsApp client not initialized'
+        });
+      }
+
+      // Send test message for the specified date
+      await whatsappService.sendTestMessage(null, 'group');
+
+      // Log audit for test message
+      await logDetailedAudit(req, {
+        action_type: 'create',
+        table_name: 'settings',
+        description: `Sent test group message for date: ${date}`,
+        success: true
+      });
+
+      res.json({
+        success: true,
+        message: 'Test group message sent successfully'
+      });
+    } catch (error) {
+      console.error('Error sending test group message:', error);
+      
+      // Log audit for failed test message
+      await logDetailedAudit(req, {
+        action_type: 'create',
+        table_name: 'settings',
+        description: 'Failed to send test group message',
+        success: false,
+        error_message: error.message
+      });
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error sending test group message'
+      });
+    }
+  }
+
+  // Trigger daily group notifications manually
+  async triggerDailyGroupNotifications(req, res) {
+    try {
+      console.log('🔔 Triggering daily group notifications...');
+      
+      const whatsappService = require('../services/whatsappService');
+      
+      // Check if WhatsApp is connected
+      console.log('📱 WhatsApp service initialized:', whatsappService.isInitialized);
+      if (!whatsappService.isInitialized) {
+        console.log('❌ WhatsApp service not initialized');
+        return res.status(400).json({
+          success: false,
+          message: 'WhatsApp client not initialized'
+        });
+      }
+
+      console.log('✅ WhatsApp service is ready, calling sendDailyGroupNotifications...');
+      // Trigger daily group notifications
+      await whatsappService.sendDailyGroupNotifications();
+      console.log('✅ sendDailyGroupNotifications completed');
+
+      // Log audit for manual trigger
+      await logDetailedAudit(req, {
+        action_type: 'create',
+        table_name: 'settings',
+        description: 'Manually triggered daily group notifications',
+        success: true
+      });
+
+      res.json({
+        success: true,
+        message: 'Daily group notifications triggered successfully'
+      });
+    } catch (error) {
+      console.error('❌ Error triggering daily group notifications:', error);
+      
+      // Log audit for failed trigger
+      await logDetailedAudit(req, {
+        action_type: 'create',
+        table_name: 'settings',
+        description: 'Failed to trigger daily group notifications',
+        success: false,
+        error_message: error.message
+      });
+      
+      res.status(500).json({
+        success: false,
+        message: 'Error triggering daily group notifications: ' + error.message
       });
     }
   }

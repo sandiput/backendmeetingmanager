@@ -74,6 +74,10 @@ router.get("/settings", settingsController.getSettings);
 router.put("/settings", validateSettings, settingsController.updateSettings);
 router.post("/settings/test-whatsapp", settingsController.testWhatsApp);
 router.put("/settings/templates", settingsController.updateTemplates);
+router.get("/settings/whatsapp-groups", settingsController.getWhatsAppGroups);
 router.put("/settings/whatsapp-group", settingsController.setWhatsAppGroup);
+router.get("/settings/preview-group-message", settingsController.previewGroupMessage);
+router.post("/settings/send-test-group-message", settingsController.sendTestGroupMessage);
+router.post("/settings/trigger-daily-notifications", settingsController.triggerDailyGroupNotifications);
 
 module.exports = router;
