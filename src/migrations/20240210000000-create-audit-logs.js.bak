@@ -1,0 +1,174 @@
+"use strict";
+
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.createTable("audit_logs", {
+      id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        primaryKey: true,
+        allowNull: false,
+      },
+
+      // User & Session Info
+      user_id: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+        comment: "User ID (null for anonymous users)",
+      },
+      session_id: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+        comment: "Browser session fingerprint",
+      },
+      ip_address: {
+        type: Sequelize.STRING(45),
+        allowNull: false,
+        comment: "Client IP address (supports IPv6)",
+      },
+      user_agent: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+        comment: "Browser user agent string",
+      },
+
+      // Action Details
+      action_type: {
+        type: Sequelize.ENUM("CREATE", "READ", "UPDATE", "DELETE"),
+        allowNull: false,
+        comment: "Type of CRUD operation",
+      },
+      table_name: {
+        type: Sequelize.ENUM("meetings", "participants", "settings", "meeting_participants", "notification_logs"),
+        allowNull: false,
+        comment: "Target table name",
+      },
+      record_id: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+        comment: "ID of the affected record",
+      },
+
+      // Request Info
+      http_method: {
+        type: Sequelize.ENUM("GET", "POST", "PUT", "DELETE", "PATCH"),
+        allowNull: false,
+        comment: "HTTP method used",
+      },
+      endpoint: {
+        type: Sequelize.STRING(500),
+        allowNull: false,
+        comment: "API endpoint accessed",
+      },
+
+      // Data Changes
+      old_values: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        comment: "Previous values before change (for UPDATE/DELETE)",
+      },
+      new_values: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        comment: "New values after change (for CREATE/UPDATE)",
+      },
+      changed_fields: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        comment: "Array of field names that were changed",
+      },
+
+      // Context
+      description: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+        comment: "Human-readable description of the action",
+      },
+      success: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+        comment: "Whether the operation was successful",
+      },
+      error_message: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+        comment: "Error message if operation failed",
+      },
+
+      // Performance
+      execution_time_ms: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        comment: "Execution time in milliseconds",
+      },
+
+      // Additional Context
+      request_payload: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        comment: "Request body/parameters (sanitized)",
+      },
+      response_status: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        comment: "HTTP response status code",
+      },
+
+      // Timestamps
+      created_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
+      },
+    });
+
+    // Create indexes for better query performance
+    await queryInterface.addIndex("audit_logs", ["action_type"], {
+      name: "idx_audit_logs_action_type",
+    });
+
+    await queryInterface.addIndex("audit_logs", ["table_name"], {
+      name: "idx_audit_logs_table_name",
+    });
+
+    await queryInterface.addIndex("audit_logs", ["record_id"], {
+      name: "idx_audit_logs_record_id",
+    });
+
+    await queryInterface.addIndex("audit_logs", ["created_at"], {
+      name: "idx_audit_logs_created_at",
+    });
+
+    await queryInterface.addIndex("audit_logs", ["user_id", "session_id"], {
+      name: "idx_audit_logs_user_session",
+    });
+
+    await queryInterface.addIndex("audit_logs", ["ip_address"], {
+      name: "idx_audit_logs_ip_address",
+    });
+
+    await queryInterface.addIndex("audit_logs", ["success"], {
+      name: "idx_audit_logs_success",
+    });
+
+    await queryInterface.addIndex("audit_logs", ["execution_time_ms"], {
+      name: "idx_audit_logs_execution_time",
+    });
+  },
+
+  down: async (queryInterface, Sequelize) => {
+    // Drop indexes first
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_action_type");
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_table_name");
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_record_id");
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_created_at");
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_user_session");
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_ip_address");
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_success");
+    await queryInterface.removeIndex("audit_logs", "idx_audit_logs_execution_time");
+
+    // Drop table
+    await queryInterface.dropTable("audit_logs");
+  },
+};

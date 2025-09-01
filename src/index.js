@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./config/database');
 const cron = require('node-cron');
+const ScheduledJobs = require('./jobs/scheduledJobs');
 
 const app = express();
 
@@ -36,4 +37,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  
+  // Initialize scheduled jobs
+  ScheduledJobs.initializeJobs();
 });

@@ -1,7 +1,7 @@
 const { Meeting, Participant, MeetingParticipant, sequelize } = require("../models");
 const { Op, fn, col, literal } = require("sequelize");
 const { logDetailedAudit } = require("../middleware/auditLogger");
-const XLSX = require('xlsx');
+const XLSX = require("xlsx");
 
 class DashboardController {
   // Helper function to calculate date range based on period
@@ -80,10 +80,10 @@ class DashboardController {
 
       // Log audit for dashboard stats view
       await logDetailedAudit(req, {
-        action_type: 'read',
-        table_name: 'dashboard_stats',
-        description: 'Lihat Statistik Dashboard',
-        success: true
+        action_type: "read",
+        table_name: "dashboard_stats",
+        description: "Lihat Statistik Dashboard",
+        success: true,
       });
 
       res.json({
@@ -97,16 +97,16 @@ class DashboardController {
       });
     } catch (error) {
       console.error("Error getting dashboard stats:", error);
-      
+
       // Log audit for failed dashboard stats view
       await logDetailedAudit(req, {
-        action_type: 'read',
-        table_name: 'dashboard_stats',
-        description: 'Gagal Lihat Statistik Dashboard',
+        action_type: "read",
+        table_name: "dashboard_stats",
+        description: "Gagal Lihat Statistik Dashboard",
         success: false,
-        error_message: error.message
+        error_message: error.message,
       });
-      
+
       res.status(500).json({
         success: false,
         message: "Error retrieving dashboard statistics",
@@ -133,7 +133,6 @@ class DashboardController {
           where: {
             date: {
               [Op.between]: [startDate, endDate],
-              [Op.lt]: now
             },
             status: "completed",
           },
@@ -174,18 +173,18 @@ class DashboardController {
 
       // Log audit for review stats view
       await logDetailedAudit(req, {
-        action_type: 'READ',
-        table_name: 'review_stats',
+        action_type: "READ",
+        table_name: "review_stats",
         description: `Viewed review statistics for ${period} period`,
-        success: true
+        success: true,
       });
 
       // Log audit for seksi stats view
       await logDetailedAudit(req, {
-        action_type: 'READ',
-        table_name: 'seksi_stats',
+        action_type: "READ",
+        table_name: "seksi_stats",
         description: `Viewed seksi statistics for ${period} period`,
-        success: true
+        success: true,
       });
 
       res.json({
@@ -194,16 +193,16 @@ class DashboardController {
       });
     } catch (error) {
       console.error("Error getting review stats:", error);
-      
+
       // Log audit for failed review stats view
       await logDetailedAudit(req, {
-        action_type: 'READ',
-        table_name: 'review_stats',
-        description: 'Failed to view review statistics',
+        action_type: "READ",
+        table_name: "review_stats",
+        description: "Failed to view review statistics",
         success: false,
-        error_message: error.message
+        error_message: error.message,
       });
-      
+
       res.status(500).json({
         success: false,
         message: "Error retrieving review statistics",
@@ -245,10 +244,10 @@ class DashboardController {
 
       // Log audit for top participants view
       await logDetailedAudit(req, {
-        action_type: 'READ',
-        table_name: 'top_participants',
+        action_type: "READ",
+        table_name: "top_participants",
         description: `Viewed top participants for ${period} period`,
-        success: true
+        success: true,
       });
 
       res.json({
@@ -257,16 +256,16 @@ class DashboardController {
       });
     } catch (error) {
       console.error("Error getting top participants:", error);
-      
+
       // Log audit for failed top participants view
       await logDetailedAudit(req, {
-        action_type: 'read',
-        table_name: 'top_participants',
-        description: 'Failed to view top participants',
+        action_type: "read",
+        table_name: "top_participants",
+        description: "Failed to view top participants",
         success: false,
-        error_message: error.message
+        error_message: error.message,
       });
-      
+
       res.status(500).json({
         success: false,
         message: "Error retrieving top participants",
@@ -304,16 +303,16 @@ class DashboardController {
       });
     } catch (error) {
       console.error("Error getting seksi stats:", error);
-      
+
       // Log audit for failed seksi stats view
       await logDetailedAudit(req, {
-        action_type: 'read',
-        table_name: 'seksi_stats',
-        description: 'Gagal Lihat Statistik Seksi',
+        action_type: "read",
+        table_name: "seksi_stats",
+        description: "Gagal Lihat Statistik Seksi",
         success: false,
-        error_message: error.message
+        error_message: error.message,
       });
-      
+
       res.status(500).json({
         success: false,
         message: "Error retrieving seksi statistics",
@@ -400,10 +399,10 @@ class DashboardController {
 
       // Log audit for meeting trends view
       await logDetailedAudit(req, {
-        action_type: 'read',
-        table_name: 'meeting_trends',
+        action_type: "read",
+        table_name: "meeting_trends",
         description: `Lihat Tren Meeting untuk periode ${period}`,
-        success: true
+        success: true,
       });
 
       res.json({
@@ -412,16 +411,16 @@ class DashboardController {
       });
     } catch (error) {
       console.error("Error getting meeting trends:", error);
-      
+
       // Log audit for failed meeting trends view
       await logDetailedAudit(req, {
-        action_type: 'read',
-        table_name: 'meeting_trends',
-        description: 'Gagal Lihat Tren Meeting',
+        action_type: "read",
+        table_name: "meeting_trends",
+        description: "Gagal Lihat Tren Meeting",
         success: false,
-        error_message: error.message
+        error_message: error.message,
       });
-      
+
       res.status(500).json({
         success: false,
         message: "Error retrieving meeting trends",
@@ -434,14 +433,14 @@ class DashboardController {
     const whereCondition = {
       status: "completed",
     };
-    
+
     // Add date range filter if provided
     if (startDate && endDate) {
       whereCondition.date = {
         [Op.between]: [startDate, endDate],
       };
     }
-    
+
     const result = await Meeting.findOne({
       attributes: [[fn("AVG", literal("TIMESTAMPDIFF(MINUTE, start_time, end_time)")), "avg_duration"]],
       where: whereCondition,
@@ -461,7 +460,7 @@ class DashboardController {
         this.getReviewStatsData(period, customStartDate, customEndDate),
         this.getTopParticipantsData(period, customStartDate, customEndDate),
         this.getSeksiStatsData(period, customStartDate, customEndDate),
-        this.getMeetingTrendsData(period, customStartDate, customEndDate)
+        this.getMeetingTrendsData(period, customStartDate, customEndDate),
       ]);
 
       // Create workbook
@@ -469,82 +468,76 @@ class DashboardController {
 
       // Sheet 1: Review Statistics
       const statsData = [
-        ['Metric', 'Value'],
-        ['Total Meetings', reviewStats.total_meetings],
-        ['Completed Meetings', reviewStats.completed_meetings],
-        ['Active Participants', reviewStats.active_participants],
-        ['Average Duration (minutes)', Math.round(reviewStats.avg_duration)],
-        ['WhatsApp Notifications', reviewStats.whatsapp_notifications],
-        ['Completion Rate (%)', Math.round(reviewStats.completion_rate * 100) / 100],
-        ['Average Participants', Math.round(reviewStats.avg_participants * 100) / 100]
+        ["Metric", "Value"],
+        ["Total Meetings", reviewStats.total_meetings],
+        ["Completed Meetings", reviewStats.completed_meetings],
+        ["Active Participants", reviewStats.active_participants],
+        ["Average Duration (minutes)", Math.round(reviewStats.avg_duration)],
+        ["WhatsApp Notifications", reviewStats.whatsapp_notifications],
+        ["Completion Rate (%)", Math.round(reviewStats.completion_rate * 100) / 100],
+        ["Average Participants", Math.round(reviewStats.avg_participants * 100) / 100],
       ];
       const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(workbook, statsSheet, 'Statistics');
+      XLSX.utils.book_append_sheet(workbook, statsSheet, "Statistics");
 
       // Sheet 2: Top Participants
-      const participantsData = [
-        ['Name', 'Seksi', 'Meeting Count', 'Attendance Rate (%)']
-      ];
-      topParticipants.forEach(p => {
+      const participantsData = [["Name", "Seksi", "Meeting Count", "Attendance Rate (%)"]];
+      topParticipants.forEach((p) => {
         participantsData.push([p.name, p.seksi, p.meeting_count, p.attendance_rate]);
       });
       const participantsSheet = XLSX.utils.aoa_to_sheet(participantsData);
-      XLSX.utils.book_append_sheet(workbook, participantsSheet, 'Top Participants');
+      XLSX.utils.book_append_sheet(workbook, participantsSheet, "Top Participants");
 
       // Sheet 3: Seksi Statistics
-      const seksiData = [
-        ['Seksi', 'Participant Count', 'Active Count', 'Meeting Count']
-      ];
-      seksiStats.forEach(s => {
+      const seksiData = [["Seksi", "Participant Count", "Active Count", "Meeting Count"]];
+      seksiStats.forEach((s) => {
         seksiData.push([s.seksi, s.participant_count, s.active_count, s.meeting_count]);
       });
       const seksiSheet = XLSX.utils.aoa_to_sheet(seksiData);
-      XLSX.utils.book_append_sheet(workbook, seksiSheet, 'Seksi Statistics');
+      XLSX.utils.book_append_sheet(workbook, seksiSheet, "Seksi Statistics");
 
       // Sheet 4: Meeting Trends
-      const trendsData = [
-        ['Period', 'Meeting Count', 'Completion Rate (%)']
-      ];
-      meetingTrends.forEach(t => {
+      const trendsData = [["Period", "Meeting Count", "Completion Rate (%)"]];
+      meetingTrends.forEach((t) => {
         trendsData.push([t.period, t.count, Math.round(t.completion_rate * 100) / 100]);
       });
       const trendsSheet = XLSX.utils.aoa_to_sheet(trendsData);
-      XLSX.utils.book_append_sheet(workbook, trendsSheet, 'Meeting Trends');
+      XLSX.utils.book_append_sheet(workbook, trendsSheet, "Meeting Trends");
 
       // Generate Excel buffer
-      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
       // Set response headers
-      const filename = `meeting-review-${period}-${new Date().toISOString().split('T')[0]}.xlsx`;
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Length', excelBuffer.length);
+      const filename = `meeting-review-${period}-${new Date().toISOString().split("T")[0]}.xlsx`;
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Length", excelBuffer.length);
 
       // Log audit for Excel export
       await logDetailedAudit(req, {
-        action_type: 'export',
-        table_name: 'review_export',
+        action_type: "export",
+        table_name: "review_export",
         description: `Exported Excel report for ${period} period`,
-        success: true
+        success: true,
       });
 
       // Send Excel file
       res.send(excelBuffer);
     } catch (error) {
-      console.error('Error exporting Excel:', error);
-      
+      console.error("Error exporting Excel:", error);
+
       // Log audit for failed Excel export
       await logDetailedAudit(req, {
-        action_type: 'export',
-        table_name: 'review_export',
-        description: 'Failed to export Excel report',
+        action_type: "export",
+        table_name: "review_export",
+        description: "Failed to export Excel report",
         success: false,
-        error_message: error.message
+        error_message: error.message,
       });
-      
+
       res.status(500).json({
         success: false,
-        message: 'Error exporting Excel report',
+        message: "Error exporting Excel report",
       });
     }
   }
@@ -564,7 +557,9 @@ class DashboardController {
       }),
       Meeting.count({
         where: {
-          date: { [Op.lt]: now },
+          date: {
+            [Op.between]: [startDate, endDate],
+          },
           status: "completed",
         },
       }),
@@ -729,7 +724,6 @@ class DashboardController {
 
     return trends;
   }
-
 }
 
 module.exports = new DashboardController();
