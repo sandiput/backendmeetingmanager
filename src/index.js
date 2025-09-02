@@ -4,6 +4,7 @@ const cors = require('cors');
 const { sequelize } = require('./config/database');
 const cron = require('node-cron');
 const ScheduledJobs = require('./jobs/scheduledJobs');
+const WhatsAppScheduler = require('./jobs/whatsappScheduler');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api', require('./routes/api'));
+app.use('/api/whatsapp', require('./routes/whatsapp'));
 
 
 // Error handling middleware
@@ -41,12 +43,7 @@ app.listen(PORT, async () => {
   // Initialize scheduled jobs
   ScheduledJobs.initializeJobs();
   
-  // Initialize WhatsApp service
-  try {
-    const WhatsAppService = require('./services/whatsappService');
-    console.log('🔄 Initializing WhatsApp service...');
-    await WhatsAppService.initialize();
-  } catch (error) {
-    console.error('❌ WhatsApp initialization error:', error);
-  }
+  // Initialize WhatsApp scheduler
+  const whatsappScheduler = new WhatsAppScheduler();
+  whatsappScheduler.initializeJobs();
 });
