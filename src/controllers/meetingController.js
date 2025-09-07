@@ -453,7 +453,7 @@ class MeetingController {
       }
 
       // Import WhatsApp service
-      const whatsappService = require('../services/WhatsAppService');
+      const whatsappService = require('../services/whatsappService');
       
       // Check WhatsApp connection status
       const status = whatsappService.getStatus();
