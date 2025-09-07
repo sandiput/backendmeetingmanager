@@ -1,2 +1,4 @@
 node_modules/
 *.log
+.wwebjs_auth
+.wwebjs_cache
