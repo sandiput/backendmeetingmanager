@@ -46,7 +46,7 @@ class WhatsAppService {
 
   setupEventHandlers() {
     this.client.on('qr', async (qr) => {
-      console.log('QR Code received');
+      console.log('QR Code received - available in frontend settings');
       try {
         // Convert QR code string to base64 image
         const qrCodeDataURL = await QRCode.toDataURL(qr);
@@ -56,7 +56,7 @@ class WhatsAppService {
         console.error('Error generating QR code image:', error);
         this.qrCode = null;
       }
-      qrcode.generate(qr, { small: true });
+      // QR code will only be displayed in frontend settings, not in terminal
     });
 
     this.client.on('ready', async () => {

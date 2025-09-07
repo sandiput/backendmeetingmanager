@@ -46,4 +46,18 @@ app.listen(PORT, async () => {
   // Initialize WhatsApp scheduler
   const whatsappScheduler = new WhatsAppScheduler();
   whatsappScheduler.initializeJobs();
+  
+  // Auto-initialize WhatsApp service if session exists
+  try {
+    const whatsappService = require('./services/whatsappService');
+    console.log('🔄 Auto-initializing WhatsApp service...');
+    const result = await whatsappService.initialize();
+    if (result.success) {
+      console.log('✅ WhatsApp service auto-initialized successfully');
+    } else {
+      console.log('⚠️ WhatsApp service initialization skipped:', result.message);
+    }
+  } catch (error) {
+    console.error('❌ WhatsApp service auto-initialization failed:', error.message);
+  }
 });

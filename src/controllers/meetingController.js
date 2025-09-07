@@ -437,7 +437,13 @@ class MeetingController {
   // Send reminder
   async sendReminder(req, res) {
     try {
-      const meeting = await Meeting.findByPk(req.params.id);
+      const meeting = await Meeting.findByPk(req.params.id, {
+        include: [{
+          model: Participant,
+          as: "participants",
+          through: { attributes: [] }
+        }]
+      });
 
       if (!meeting) {
         return res.status(404).json({
@@ -446,18 +452,117 @@ class MeetingController {
         });
       }
 
+      // Import WhatsApp service
+      const whatsappService = require('../services/WhatsAppService');
+      
+      // Check WhatsApp connection status
+      const status = whatsappService.getStatus();
+      if (!status.isConnected) {
+        return res.status(400).json({
+          success: false,
+          message: "WhatsApp is not connected. Please check connection status.",
+        });
+      }
+
+      const { type = 'both', recipients } = req.body;
+      const results = {
+        group: null,
+        individual: null
+      };
+
+      // Send group reminder if requested
+      if (type === 'group' || type === 'both') {
+        try {
+          const settings = await Settings.findOne();
+          if (settings && settings.whatsapp_group_id && settings.group_notification_enabled) {
+            const message = settings.formatGroupMessage([meeting]);
+            await whatsappService.sendGroupMessage(settings.whatsapp_group_id, message);
+            results.group = { success: true, message: 'Group reminder sent successfully' };
+          } else {
+            results.group = { success: false, message: 'Group notifications not configured' };
+          }
+        } catch (error) {
+          console.error('Error sending group reminder:', error);
+          results.group = { success: false, message: error.message };
+        }
+      }
+
+      // Send individual reminders if requested
+      if (type === 'individual' || type === 'both') {
+        try {
+          const settings = await Settings.findOne();
+          if (settings && settings.individual_reminder_enabled) {
+            const message = settings.formatIndividualMessage(meeting);
+            const individualResults = [];
+            
+            // Determine recipients
+            const targetParticipants = recipients && recipients.length > 0 
+              ? meeting.participants.filter(p => recipients.includes(p.id))
+              : meeting.participants;
+
+            for (const participant of targetParticipants) {
+              if (participant.whatsapp_number) {
+                try {
+                  await whatsappService.sendIndividualMessage(participant.whatsapp_number, message);
+                  individualResults.push({ 
+                    participant: participant.name, 
+                    success: true 
+                  });
+                } catch (error) {
+                  console.error(`Error sending reminder to ${participant.name}:`, error);
+                  individualResults.push({ 
+                    participant: participant.name, 
+                    success: false, 
+                    error: error.message 
+                  });
+                }
+              } else {
+                individualResults.push({ 
+                  participant: participant.name, 
+                  success: false, 
+                  error: 'No WhatsApp number' 
+                });
+              }
+            }
+            
+            results.individual = {
+              success: individualResults.some(r => r.success),
+              results: individualResults,
+              message: `Individual reminders processed for ${individualResults.length} participants`
+            };
+          } else {
+            results.individual = { success: false, message: 'Individual reminders not enabled' };
+          }
+        } catch (error) {
+          console.error('Error sending individual reminders:', error);
+          results.individual = { success: false, message: error.message };
+        }
+      }
+
+      // Update reminder_sent flag if any reminder was successful
+      const anySuccess = (results.group && results.group.success) || 
+                        (results.individual && results.individual.success);
+      
+      if (anySuccess) {
+        await Meeting.update(
+          { reminder_sent: true },
+          { where: { id: meeting.id } }
+        );
+      }
+
       // Log audit for reminder attempt
       await logDetailedAudit(req, {
         action_type: "UPDATE",
         table_name: "meetings",
         record_id: meeting.id,
-        description: `Percobaan kirim reminder untuk meeting: ${meeting.title}`,
-        success: false,
+        description: `WhatsApp reminder sent for meeting: ${meeting.title}`,
+        success: anySuccess,
       });
 
-      res.status(400).json({
-        success: false,
-        message: "WhatsApp reminder feature has been disabled. Please use alternative notification methods.",
+      res.json({
+        success: anySuccess,
+        message: anySuccess ? "Reminder sent successfully" : "Failed to send reminders",
+        data: results
       });
     } catch (error) {
       console.error("Error in sendReminder:", error);
