@@ -237,7 +237,7 @@ class MeetingController {
             model: Participant,
             as: "participants",
             attributes: ["name", "seksi"],
-            through: { attributes: [] },
+            through: { attributes: ["is_designated"] },
           },
         ],
       });
@@ -302,11 +302,19 @@ class MeetingController {
       const meetingId = meeting.id;
       console.log("Found meeting with ID:", meetingId);
 
-      // Update participants if designated_attendees is provided
-      if (req.body.designated_attendees) {
+      // Update participants if designated_attendees or participants is provided
+      if (req.body.designated_attendees || req.body.participants) {
+        let participantNames = [];
+        
+        if (req.body.designated_attendees) {
+          participantNames = req.body.designated_attendees;
+        } else if (req.body.participants) {
+          participantNames = req.body.participants.map(p => p.name);
+        }
+        
         const participants = await Participant.findAll({
           where: {
-            name: { [Op.in]: req.body.designated_attendees },
+            name: { [Op.in]: participantNames },
           },
         });
 
@@ -335,9 +343,11 @@ class MeetingController {
         }
       }
 
-      // Create a copy of req.body without the id field to prevent overriding
+      // Create a copy of req.body without the id field and participants field to prevent overriding
       const updateData = { ...req.body };
       delete updateData.id;
+      delete updateData.participants; // Remove participants as it's not a Meeting field
+      delete updateData.designated_attendees; // Remove designated_attendees as it's not a Meeting field
 
       // Use time data as is without normalization
 

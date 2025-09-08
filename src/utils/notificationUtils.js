@@ -14,7 +14,16 @@ class NotificationUtils {
       message += `📅 ${formatDateIndonesian(meeting.date)}\n`;
       message += `⏰ ${formatTime(meeting.time)}\n`;
       message += `📍 ${meeting.location}\n`;
-      message += `👥 ${meeting.attendees.length} peserta\n`;
+      // Get unique sections from participants
+      const uniqueSections = [...new Set(
+        meeting.participants?.map(p => p.section).filter(section => section) || []
+      )];
+      
+      if (uniqueSections.length > 0) {
+        message += `👥 ${uniqueSections.join(', ')}\n`;
+      } else {
+        message += `👥 ${meeting.participants?.length || 0} peserta\n`;
+      }
       if (meeting.notes) {
         message += `📝 ${meeting.notes}\n`;
       }
@@ -116,8 +125,8 @@ class NotificationUtils {
     message += `📍 ${meeting.location}\n\n`;
     
     // Attendance summary
-    const totalAttendees = meeting.attendees.length;
-    const presentAttendees = meeting.attendees.filter(a => a.attendance_confirmed).length;
+    const totalAttendees = meeting.participants?.length || 0;
+    const presentAttendees = meeting.participants?.filter(a => a.attendance_confirmed).length || 0;
     
     message += `👥 Kehadiran: ${presentAttendees}/${totalAttendees} peserta\n`;
     
