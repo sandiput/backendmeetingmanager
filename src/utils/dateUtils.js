@@ -1,33 +1,41 @@
-const { format, parseISO, isValid, isBefore, isAfter, addMinutes } = require("date-fns");
-const { id } = require("date-fns/locale");
+const { isValid, isBefore, isAfter, addMinutes, parseISO } = require("date-fns");
 
-// Format date to Indonesian format
+// Format date to Indonesian format 
 const formatDateIndonesian = (date) => {
   if (typeof date === "string") {
-    date = parseISO(date);
+    date = new Date(date);
   }
-  return format(date, "EEEE, d MMMM yyyy", { locale: id });
+  
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  
+  const dayName = days[date.getDay()];
+  const day = String(date.getDate()).padStart(2, '0');
+  const monthName = months[date.getMonth()];
+  const year = date.getFullYear();
+  
+  return `${dayName}, ${day} ${monthName} ${year}`;
 };
 
-// Format time to 24-hour format with seconds (ISO 8601 compliant)
+// Format time to 24-hour format (HH:mm)
 const formatTime = (time) => {
   if (!time) return "";
 
-  // If time is already in HH:mm:ss format, ensure it's properly formatted
+  // If time is already in HH:mm:ss format, extract hours and minutes only
   if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(time)) {
-    const [hours, minutes, seconds] = time.split(":");
-    return `${hours.padStart(2, "0")}:${minutes}:${seconds}`;
+    const [hours, minutes] = time.split(":");
+    return `${hours.padStart(2, "0")}:${minutes}`;
   }
 
-  // If time is in HH:mm format, add seconds and ensure proper formatting
+  // If time is in HH:mm format, ensure proper formatting
   if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
     const [hours, minutes] = time.split(":");
-    return `${hours.padStart(2, "0")}:${minutes}:00`;
+    return `${hours.padStart(2, "0")}:${minutes}`;
   }
 
-  // If time is a Date object, format it with seconds
+  // If time is a Date object, format it without seconds
   if (time instanceof Date) {
-    return format(time, "HH:mm:ss");
+    return format(time, "HH:mm");
   }
 
   return "";

@@ -79,6 +79,11 @@ class SettingsController {
       // Only update provided fields
       const updatedSettings = await settings.update(updates);
 
+      // Update group notification schedule if time changed
+       if (updates.group_notification_time && global.whatsappScheduler) {
+         await global.whatsappScheduler.updateGroupNotificationSchedule();
+       }
+
       // Determine changed fields
       const changedFields = Object.keys(updates).filter((key) => JSON.stringify(oldValues[key]) !== JSON.stringify(updatedSettings[key]));
 

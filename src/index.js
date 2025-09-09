@@ -45,7 +45,10 @@ app.listen(PORT, async () => {
   
   // Initialize WhatsApp scheduler
   const whatsappScheduler = new WhatsAppScheduler();
-  whatsappScheduler.initializeJobs();
+  await whatsappScheduler.initializeJobs();
+  
+  // Make scheduler globally accessible
+  global.whatsappScheduler = whatsappScheduler;
   
   // Auto-initialize WhatsApp service if session exists
   try {

@@ -1,23 +1,20 @@
 const { Model, DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
-const { formatDateIndonesian } = require("../utils/dateUtils");
+const { formatDateIndonesian, formatTime } = require("../utils/dateUtils");
 
 class Settings extends Model {
-  formatGroupMessage(meetings) {
+  formatGroupMessage(meetings, date) {
     let meetingsText = meetings
       .map((meeting, index) => {
         // Get unique sections from participants
-        const uniqueSections = [...new Set(meeting.participants?.map((p) => p.seksi).filter((seksi) => seksi) || [])];
+        const uniqueSections = [...new Set(meeting.participants?.map((p) => p.seksi) || [])];
 
         const attendees = uniqueSections.length > 0 ? uniqueSections.join(", ") : "Semua peserta";
-
-        // Replace {nomor} with meeting number for each meeting
-        let meetingTemplate = `${index + 1}. *${meeting.title}*${meeting.agenda ? `\n📋 ${meeting.agenda}` : ""}\n⏰ ${meeting.start_time} - ${meeting.end_time}\n📍 ${meeting.location}${
-          meeting.meeting_link ? `, ${meeting.meeting_link}` : ""
-        }\n👥 ${attendees}${meeting.dress_code ? `\n👔 ${meeting.dress_code}` : ""}`;
-
-        // If template contains {nomor}, replace it with the meeting number
-        meetingTemplate = meetingTemplate.replace(/{nomor}/g, index + 1);
+        console.log("Cek Participants:", meeting.participants);
+        // Format meeting text
+        let meetingTemplate = `*${index + 1}. ${meeting.title}*${meeting.agenda ? `\n   📋 ${meeting.agenda}` : ""}\n   ⏰ ${formatTime(meeting.start_time)} - ${formatTime(meeting.end_time)}\n   📍 ${
+          meeting.location
+        }${meeting.meeting_link ? `,  ${meeting.meeting_link}` : ""}\n   👥 ${attendees}${meeting.dress_code ? `\n   👔 ${meeting.dress_code}` : ""}`;
 
         return meetingTemplate;
       })
@@ -31,8 +28,8 @@ class Settings extends Model {
       message = message
         .replace(/{nomor}/g, "1")
         .replace("{title}", meeting.title || "")
-        .replace("{start_time}", meeting.start_time || "")
-        .replace("{end_time}", meeting.end_time || "")
+        .replace("{start_time}", formatTime(meeting.start_time) || "")
+        .replace("{end_time}", formatTime(meeting.end_time) || "")
         .replace("{location}", meeting.location || "")
         .replace("{meeting_link}", meeting.meeting_link || "")
         .replace("{dress_code}", meeting.dress_code || "")
@@ -53,30 +50,34 @@ class Settings extends Model {
     return message;
   }
 
-  formatIndividualMessage(meeting) {
+  formatIndividualMessage(meeting, nomor = 1) {
     let message = this.notification_templates.individual_reminder
-      .replace("{title}", meeting.title)
-      .replace("{date}", formatDateIndonesian(meeting.date))
-      .replace("{start_time}", meeting.start_time)
-      .replace("{end_time}", meeting.end_time)
-      .replace("{location}", meeting.location);
+      .replace("{nomor}", nomor)
+      .replace("{title}", meeting.title || "Rapat")
+      .replace("{date}", meeting.date ? formatDateIndonesian(meeting.date) : formatDateIndonesian(new Date()))
+      .replace("{start_time}", formatTime(meeting.start_time))
+      .replace("{end_time}", formatTime(meeting.end_time))
+      .replace("{location}", meeting.location || "TBD");
 
+    // Handle meeting link
     if (meeting.meeting_link) {
-      message = message.replace("{meeting_link}", `💻 Join: ${meeting.meeting_link}`);
+      message = message.replace("{meeting_link}", `\n🔗 ${meeting.meeting_link}`);
     } else {
-      message = message.replace("{meeting_link}\n", "");
+      message = message.replace("{meeting_link}", "");
     }
 
+    // Handle dress code
     if (meeting.dress_code) {
-      message = message.replace("{dress_code}", `👔 Dress Code: ${meeting.dress_code}`);
+      message = message.replace("{dress_code}", meeting.dress_code);
     } else {
-      message = message.replace("{dress_code}\n", "");
+      message = message.replace("{dress_code}", "-");
     }
 
+    // Handle attendance link
     if (meeting.attendance_link) {
-      message = message.replace("{attendance_link}", `🔗 Attendance: ${meeting.attendance_link}`);
+      message = message.replace("{attendance_link}", meeting.attendance_link);
     } else {
-      message = message.replace("{attendance_link}\n", "");
+      message = message.replace("{attendance_link}", "-");
     }
 
     return message;

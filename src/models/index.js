@@ -6,7 +6,6 @@ const Participant = require('./Participant')(sequelize);
 const Settings = require('./Settings');
 const MeetingParticipant = require('./MeetingParticipant');
 const MeetingFile = require('./MeetingFile');
-const NotificationLog = require('./NotificationLog');
 const AuditLog = require('./audit_log');
 
 // Define associations
@@ -24,20 +23,7 @@ Participant.belongsToMany(Meeting, {
   as: 'meetings'
 });
 
-Meeting.hasMany(NotificationLog, {
-  foreignKey: 'meeting_id',
-  as: 'notificationLogs'
-});
 
-NotificationLog.belongsTo(Meeting, {
-  foreignKey: 'meeting_id',
-  as: 'meeting'
-});
-
-NotificationLog.belongsTo(Participant, {
-  foreignKey: 'participant_id',
-  as: 'participant'
-});
 
 Meeting.hasMany(MeetingFile, {
   foreignKey: 'meeting_id',
@@ -56,6 +42,5 @@ module.exports = {
   Settings,
   MeetingParticipant,
   MeetingFile,
-  NotificationLog,
   AuditLog
 };

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
 const { Meeting, Participant, Settings } = require('../models');
+const { formatDateIndonesian } = require('../utils/dateUtils');
 
 class WhatsAppService {
   constructor() {
@@ -162,11 +163,28 @@ class WhatsAppService {
     }
 
     try {
-      await this.client.sendMessage(chatId, message);
-      return { success: true, message: 'Message sent successfully' };
+      const result = await this.client.sendMessage(chatId, message);
+      
+      // Check if message was actually sent
+      if (result && result.id) {
+        console.log(`📤 Message sent to ${chatId}, ID: ${result.id}`);
+        return { success: true, message: 'Message sent successfully', messageId: result.id };
+      } else {
+        throw new Error('Message sent but no confirmation received');
+      }
     } catch (error) {
-      console.error('Error sending WhatsApp message:', error);
-      throw new Error(`Failed to send message: ${error.message}`);
+      console.error(`❌ Error sending WhatsApp message to ${chatId}:`, error.message);
+      
+      // Provide more specific error messages
+      if (error.message.includes('phone number is not registered')) {
+        throw new Error(`Phone number ${chatId} is not registered on WhatsApp`);
+      } else if (error.message.includes('network')) {
+        throw new Error('Network error: Unable to send message');
+      } else if (error.message.includes('rate limit')) {
+        throw new Error('Rate limit exceeded: Too many messages sent');
+      } else {
+        throw new Error(`Failed to send message: ${error.message}`);
+      }
     }
   }
 
@@ -287,12 +305,7 @@ class WhatsAppService {
     const template = settings.notification_templates?.group_daily || 
       '*Jadwal Rapat Hari Ini*\n*{date}*\n\n{meetings}';
     
-    const formattedDate = new Date(date).toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const formattedDate = formatDateIndonesian(new Date(date));
 
     let meetingsText = '';
     meetings.forEach((meeting, index) => {
@@ -316,20 +329,7 @@ class WhatsAppService {
   }
 
   generateIndividualMessage(meeting, settings) {
-    const template = settings.notification_templates?.individual_reminder || 
-      '*Pengingat Rapat*\n\n📅 {title}\n🕐 {start_time} - {end_time}\n📍 {location}\n\nRapat akan dimulai dalam 30 menit.{meeting_link}';
-    
-    const startTime = meeting.start_time.substring(0, 5);
-    const endTime = meeting.end_time.substring(0, 5);
-    const location = meeting.location || 'TBD';
-    const meetingLink = meeting.meeting_link ? `\n\n🔗 Link: ${meeting.meeting_link}` : '';
-
-    return template
-      .replace('{title}', meeting.title)
-      .replace('{start_time}', startTime)
-      .replace('{end_time}', endTime)
-      .replace('{location}', location)
-      .replace('{meeting_link}', meetingLink);
+    return settings.formatIndividualMessage(meeting);
   }
 
   async testConnection() {
