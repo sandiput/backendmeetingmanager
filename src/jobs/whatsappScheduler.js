@@ -98,11 +98,11 @@ class WhatsAppScheduler {
         return;
       }
 
-      // Get today's meetings
-      const today = moment().format("YYYY-MM-DD");
+      // Get tomorrow's meetings (H+1)
+      const tomorrow = moment().add(1, 'day').format("YYYY-MM-DD");
       const meetings = await Meeting.findAll({
         where: {
-          date: today,
+          date: tomorrow,
           status: {
             [Op.ne]: "cancelled",
           },
@@ -116,7 +116,7 @@ class WhatsAppScheduler {
       });
 
       if (meetings.length === 0) {
-        console.log("📅 No meetings scheduled for today, skipping group notification");
+        console.log("📅 No meetings scheduled for tomorrow, skipping group notification");
         return;
       }
 
@@ -136,8 +136,8 @@ class WhatsAppScheduler {
         meetingsText += "\n";
       });
 
-      // Use template from database
-      const message = settings.formatGroupMessage(meetings, moment().format("dddd, DD MMMM YYYY"));
+      // Use template from database with tomorrow's date
+      const message = settings.formatGroupMessage(meetings, moment().add(1, 'day').format("dddd, DD MMMM YYYY"));
 
       // Prepare log data for group notification
       const logData = {
@@ -145,7 +145,7 @@ class WhatsAppScheduler {
         sender_type: 'scheduler',
         group_name: 'Daily Group Notification',
         meeting_title: meetings.length === 1 ? meetings[0].title : `${meetings.length} meetings`,
-        meeting_date: moment().format("YYYY-MM-DD"),
+        meeting_date: moment().add(1, 'day').format("YYYY-MM-DD"),
         participant_ids: meetings.flatMap(m => m.participants ? m.participants.map(p => p.id) : [])
       };
 

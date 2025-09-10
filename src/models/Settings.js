@@ -20,7 +20,11 @@ class Settings extends Model {
       })
       .join("\n\n");
 
-    let message = this.notification_templates.group_daily.replace("{date}", formatDateIndonesian(new Date())).replace("{meetings}", meetingsText);
+    // Create tomorrow's date (H+1)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    let message = this.notification_templates.group_daily.replace("{date}", formatDateIndonesian(tomorrow)).replace("{meetings}", meetingsText);
 
     // Replace individual meeting variables if there's only one meeting
     if (meetings.length === 1) {
