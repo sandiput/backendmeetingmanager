@@ -61,23 +61,38 @@ class Settings extends Model {
 
     // Handle meeting link
     if (meeting.meeting_link) {
-      message = message.replace("{meeting_link}", `\n🔗 ${meeting.meeting_link}`);
+      message = message.replace("{meeting_link}", `, ${meeting.meeting_link}`);
     } else {
       message = message.replace("{meeting_link}", "");
     }
 
-    // Handle dress code
-    if (meeting.dress_code) {
-      message = message.replace("{dress_code}", meeting.dress_code);
+    // Handle agenda - only show if exists
+    if (meeting.agenda) {
+      message = message.replace("{agenda}", `📋 ${meeting.agenda}`);
     } else {
-      message = message.replace("{dress_code}", "-");
+      message = message.replace("{agenda}", "");
     }
 
-    // Handle attendance link
-    if (meeting.attendance_link) {
-      message = message.replace("{attendance_link}", meeting.attendance_link);
+    // Handle dress code - only show if exists
+    if (meeting.dress_code) {
+      message = message.replace("{dress_code}", `👔 ${meeting.dress_code}`);
     } else {
-      message = message.replace("{attendance_link}", "-");
+      message = message.replace("{dress_code}", "");
+    }
+
+    // Handle participants - only show if exists
+    if (meeting.participants && meeting.participants.length > 0) {
+      const participantNames = meeting.participants.map((p) => p.name).join(", ");
+      message = message.replace("{participants}", `👥 ${participantNames}`);
+    } else {
+      message = message.replace("{participants}", "");
+    }
+
+    // Handle attendance link - only show if exists
+    if (meeting.attendance_link) {
+      message = message.replace("{attendance_link}", `🔗 ${meeting.attendance_link}`);
+    } else {
+      message = message.replace("{attendance_link}", "");
     }
 
     return message;
@@ -132,7 +147,7 @@ Settings.init(
       defaultValue: {
         group_daily: "*Jadwal Rapat Hari Ini*\n*{date}*\n\n{meetings}\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen",
         individual_reminder:
-          "*Jadwal Rapat Hari Ini*\n*{date}*\n{nomor}. {title}\nWaktu : {start_time} s.d. {end_time}\nLokasi : {location} {meeting_link}_\n_Dresscode : {dress_code}\n\nHarap bersiap dan datang tepat waktu.\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen",
+          "*Jadwal Rapat Hari Ini*\n*{date}*\n{nomor}. {title}\nWaktu : {start_time} s.d. {end_time}\nLokasi : {location} {meeting_link}{agenda}\nDresscode : {dress_code}\nPeserta : {participants} {attendance_link}\n\nHarap bersiap dan datang tepat waktu.\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen",
       },
       get() {
         const rawValue = this.getDataValue("notification_templates");

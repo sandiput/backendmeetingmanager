@@ -165,19 +165,20 @@ class WhatsAppScheduler {
       }
 
       const reminderMinutes = settings.individual_reminder_minutes || 30;
-
-      // Calculate the target time (current time + reminder minutes)
-      const targetTime = moment().add(reminderMinutes, "minutes");
+      const currentTime = moment();
+      
+      // Calculate the exact target time (current time + reminder minutes)
+      const targetTime = currentTime.clone().add(reminderMinutes, "minutes");
       const targetDate = targetTime.format("YYYY-MM-DD");
       const targetTimeStr = targetTime.format("HH:mm");
 
-      // Find meetings that start at the target time
+      console.log(`🔍 Checking for meetings at ${targetDate} ${targetTimeStr} (${reminderMinutes} minutes from now)`);
+
+      // Find meetings that start exactly at the target time (no range)
       const meetings = await Meeting.findAll({
         where: {
           date: targetDate,
-          start_time: {
-            [Op.between]: [moment(targetTimeStr, "HH:mm").subtract(1, "minute").format("HH:mm"), moment(targetTimeStr, "HH:mm").add(1, "minute").format("HH:mm")],
-          },
+          start_time: targetTimeStr, // Exact match instead of range
           status: {
             [Op.ne]: "cancelled",
           },
@@ -195,7 +196,10 @@ class WhatsAppScheduler {
         ],
       });
 
+      console.log(`📋 Found ${meetings.length} meetings requiring reminders`);
+
       for (const meeting of meetings) {
+        console.log(`📤 Processing reminder for meeting: ${meeting.title} at ${meeting.date} ${meeting.start_time}`);
         await this.sendIndividualReminder(meeting, settings);
       }
     } catch (error) {
@@ -206,7 +210,24 @@ class WhatsAppScheduler {
   // Send individual reminder for a specific meeting
   async sendIndividualReminder(meeting, settings) {
     try {
-      if (!meeting.participants || meeting.participants.length === 0) {
+      // Double-check reminder_sent status to prevent race conditions
+      const freshMeeting = await Meeting.findByPk(meeting.id, {
+        attributes: ['id', 'reminder_sent', 'title']
+      });
+      
+      if (freshMeeting && freshMeeting.reminder_sent) {
+        console.log(`⚠️ Reminder already sent for meeting: ${meeting.title} (ID: ${meeting.id})`);
+        return;
+      }
+      
+      console.log(`📤 Sending individual reminder for meeting: ${meeting.title}`);
+      console.log(`   📅 Date: ${meeting.date}`);
+      console.log(`   ⏰ Time: ${meeting.start_time} - ${meeting.end_time}`);
+      console.log(`   📍 Location: ${meeting.location}`);
+
+      const participants = meeting.participants || [];
+      
+      if (!participants || participants.length === 0) {
         console.log(`⚠️ No participants found for meeting: ${meeting.title}`);
         return;
       }
@@ -215,7 +236,6 @@ class WhatsAppScheduler {
       const message = settings.formatIndividualMessage(meeting);
 
       // Send to each participant
-      const participants = Array.isArray(meeting.participants) ? meeting.participants : JSON.parse(meeting.participants || "[]");
       let successCount = 0;
       let failCount = 0;
 
@@ -244,15 +264,22 @@ class WhatsAppScheduler {
         }
       }
 
-      // Mark reminder as sent only if at least one was successful
-      if (successCount > 0) {
-        await Meeting.update({ reminder_sent: true }, { where: { id: meeting.id } });
-      }
-
+      // Always mark reminder as sent after first attempt to prevent duplicate sending
+      // This prevents the scheduler from sending the same reminder multiple times
+      const updateResult = await Meeting.update(
+        { reminder_sent: true }, 
+        { 
+          where: { id: meeting.id },
+          returning: true // For debugging
+        }
+      );
+      
+      console.log(`✅ Reminder status updated for meeting ID: ${meeting.id}`);
       console.log(`📊 Individual reminder summary for meeting: ${meeting.title}`);
       console.log(`   ✅ Successfully sent: ${successCount}`);
       console.log(`   ❌ Failed to send: ${failCount}`);
       console.log(`   📱 Total participants: ${participants.length}`);
+      console.log(`   🔒 Reminder marked as sent to prevent duplicates`);
     } catch (error) {
       console.error(`❌ Error sending individual reminder for meeting ${meeting.title}:`, error);
     }

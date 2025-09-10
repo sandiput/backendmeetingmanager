@@ -63,34 +63,6 @@ class NotificationUtils {
 
     return `Ini adalah pesan test untuk nomor ${recipient}. ` + "Jika Anda menerima pesan ini, berarti konfigurasi notifikasi individual berhasil.";
   }
-
-  // Format meeting summary message
-  static formatSummaryMessage(meeting) {
-    let message = `📋 Ringkasan Rapat\n\n`;
-    message += `*${meeting.title}*\n`;
-    message += `📅 ${formatDateIndonesian(meeting.date)}\n`;
-    message += `⏰ ${formatTime(meeting.time)}\n`;
-    message += `📍 ${meeting.location}\n\n`;
-
-    // Attendance summary
-    const totalAttendees = meeting.participants?.length || 0;
-    const presentAttendees = meeting.participants?.filter((a) => a.attendance_confirmed).length || 0;
-
-    message += `👥 Kehadiran: ${presentAttendees}/${totalAttendees} peserta\n`;
-
-    if (meeting.summary) {
-      message += `\n📝 Hasil Rapat:\n${meeting.summary}`;
-    }
-
-    if (meeting.action_items && meeting.action_items.length > 0) {
-      message += `\n\n📌 Tindak Lanjut:\n`;
-      meeting.action_items.forEach((item, index) => {
-        message += `${index + 1}. ${item}\n`;
-      });
-    }
-
-    return message;
-  }
 }
 
 module.exports = NotificationUtils;
