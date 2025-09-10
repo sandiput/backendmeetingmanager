@@ -8,6 +8,7 @@ const MeetingParticipant = require('./MeetingParticipant');
 const MeetingFile = require('./MeetingFile');
 const AuditLog = require('./audit_log');
 const WhatsAppLog = require('./WhatsAppLog');
+const DaftarKantor = require('./DaftarKantor')(sequelize);
 
 // Define associations
 Meeting.belongsToMany(Participant, {
@@ -44,5 +45,6 @@ module.exports = {
   MeetingParticipant,
   MeetingFile,
   AuditLog,
-  WhatsAppLog
+  WhatsAppLog,
+  DaftarKantor
 };

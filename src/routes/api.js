@@ -7,6 +7,7 @@ const meetingController = require("../controllers/meetingController");
 const participantController = require("../controllers/participantController");
 const settingsController = require("../controllers/settingsController");
 const dashboardController = require("../controllers/dashboardController");
+const daftarKantorController = require("../controllers/daftarKantorController");
 
 // Health Check Route
 router.get("/health", (req, res) => {
@@ -73,5 +74,9 @@ router.delete("/participants/:id", (req, res) => participantController.deletePar
 router.get("/settings", settingsController.getSettings);
 router.put("/settings", validateSettings, settingsController.updateSettings);
 router.put("/settings/templates", settingsController.updateTemplates);
+
+// Daftar Kantor Routes
+router.get("/kantor", daftarKantorController.getAllKantor);
+router.get("/kantor/search/:query", daftarKantorController.searchKantor);
 
 module.exports = router;

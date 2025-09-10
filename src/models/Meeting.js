@@ -73,6 +73,10 @@ module.exports = (sequelize) => {
     invited_by: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    invitation_letter_reference: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     sequelize,
