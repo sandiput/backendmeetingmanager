@@ -1,6 +1,6 @@
 const cron = require("node-cron");
 const whatsappService = require("../services/whatsappService");
-const { Meeting, Settings, Participant } = require("../models");
+const { Meeting, Settings, Participant, WhatsAppLog } = require("../models");
 const { Op } = require("sequelize");
 const moment = require("moment");
 
@@ -139,8 +139,18 @@ class WhatsAppScheduler {
       // Use template from database
       const message = settings.formatGroupMessage(meetings, moment().format("dddd, DD MMMM YYYY"));
 
+      // Prepare log data for group notification
+      const logData = {
+        meeting_id: meetings.length === 1 ? meetings[0].id : null,
+        sender_type: 'scheduler',
+        group_name: 'Daily Group Notification',
+        meeting_title: meetings.length === 1 ? meetings[0].title : `${meetings.length} meetings`,
+        meeting_date: moment().format("YYYY-MM-DD"),
+        participant_ids: meetings.flatMap(m => m.participants ? m.participants.map(p => p.id) : [])
+      };
+
       // Send group message
-      await this.whatsappService.sendGroupMessage(settings.whatsapp_group_id, message);
+      await this.whatsappService.sendGroupMessage(settings.whatsapp_group_id, message, logData);
 
       // Update last group notification time
       await Settings.update({ last_group_notification: new Date() }, { where: { id: settings.id } });
@@ -250,8 +260,20 @@ class WhatsAppScheduler {
           }
 
           try {
+            // Prepare log data for individual reminder
+            const logData = {
+              meeting_id: meeting.id,
+              sender_type: 'scheduler',
+              recipient_id: participant.id.toString(),
+              recipient_name: participant.name,
+              meeting_title: meeting.title,
+              meeting_date: meeting.date,
+              meeting_time: meeting.start_time,
+              reminder_minutes: settings.individual_reminder_minutes || 30
+            };
+            
             // Send message
-            await whatsappService.sendIndividualMessage(phoneNumber, message);
+            await whatsappService.sendIndividualMessage(phoneNumber, message, logData);
 
             console.log(`✅ Reminder sent to ${participant.name} (${phoneNumber})`);
             successCount++;

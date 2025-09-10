@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
-const { Meeting, Participant, Settings } = require('../models');
+const { Meeting, Participant, Settings, WhatsAppLog } = require('../models');
 const { formatDateIndonesian } = require('../utils/dateUtils');
 
 class WhatsAppService {
@@ -157,23 +157,50 @@ class WhatsAppService {
     return this.availableGroups;
   }
 
-  async sendMessage(chatId, message) {
-    if (!this.isConnected) {
-      throw new Error('WhatsApp not connected');
-    }
-
+  async sendMessage(chatId, message, logData = null) {
+    let logId = null;
+    
     try {
+      // Create log entry before sending
+      if (logData) {
+        const log = await WhatsAppLog.createLog({
+          ...logData,
+          message_content: message,
+          status: 'pending'
+        });
+        logId = log.id;
+      }
+      
+      if (!this.isConnected) {
+        const errorMsg = 'WhatsApp not connected';
+        if (logId) {
+          await WhatsAppLog.updateLogStatus(logId, 'failed', null, errorMsg);
+        }
+        throw new Error(errorMsg);
+      }
+      
       const result = await this.client.sendMessage(chatId, message);
       
       // Check if message was actually sent
       if (result && result.id) {
         console.log(`📤 Message sent to ${chatId}, ID: ${result.id}`);
-        return { success: true, message: 'Message sent successfully', messageId: result.id };
+        
+        // Update log with success status
+        if (logId) {
+          await WhatsAppLog.updateLogStatus(logId, 'success', result.id);
+        }
+        
+        return { success: true, message: 'Message sent successfully', messageId: result.id, logId };
       } else {
         throw new Error('Message sent but no confirmation received');
       }
     } catch (error) {
       console.error(`❌ Error sending WhatsApp message to ${chatId}:`, error.message);
+      
+      // Update log with failed status
+      if (logId) {
+        await WhatsAppLog.updateLogStatus(logId, 'failed', null, error.message);
+      }
       
       // Provide more specific error messages
       if (error.message.includes('phone number is not registered')) {
@@ -188,11 +215,20 @@ class WhatsAppService {
     }
   }
 
-  async sendGroupMessage(groupId, message) {
-    return await this.sendMessage(groupId, message);
+  async sendGroupMessage(groupId, message, logData = null) {
+    // Prepare log data for group message
+    const groupLogData = logData ? {
+      ...logData,
+      message_type: 'group',
+      recipient_type: 'group',
+      group_id: groupId,
+      group_name: logData.group_name || 'Unknown Group'
+    } : null;
+    
+    return await this.sendMessage(groupId, message, groupLogData);
   }
 
-  async sendIndividualMessage(phoneNumber, message) {
+  async sendIndividualMessage(phoneNumber, message, logData = null) {
     // Format phone number (remove non-digits and add country code if needed)
     let formattedNumber = phoneNumber.replace(/\D/g, '');
     
@@ -206,7 +242,16 @@ class WhatsAppService {
     }
     
     const chatId = formattedNumber + '@c.us';
-    return await this.sendMessage(chatId, message);
+    
+    // Prepare log data for individual message
+    const individualLogData = logData ? {
+      ...logData,
+      message_type: 'individual',
+      recipient_type: 'participant',
+      whatsapp_number: formattedNumber
+    } : null;
+    
+    return await this.sendMessage(chatId, message, individualLogData);
   }
 
   async sendDailyGroupNotification(date = null) {
@@ -239,8 +284,18 @@ class WhatsAppService {
       // Generate message using template
       const message = this.generateGroupMessage(meetings, targetDate, settings);
       
+      // Prepare log data for group notification
+      const logData = {
+        meeting_id: meetings.length === 1 ? meetings[0].id : null,
+        sender_type: 'scheduler',
+        group_name: 'Daily Group Notification',
+        meeting_title: meetings.length === 1 ? meetings[0].title : `${meetings.length} meetings`,
+        meeting_date: targetDate,
+        participant_ids: meetings.flatMap(m => m.participants.map(p => p.id))
+      };
+      
       // Send to group
-      await this.sendGroupMessage(settings.whatsapp_group_id, message);
+      await this.sendGroupMessage(settings.whatsapp_group_id, message, logData);
       
       // Update last notification time
       await Settings.update(
@@ -281,7 +336,19 @@ class WhatsAppService {
       for (const participant of meeting.participants) {
         if (participant.phone) {
           try {
-            await this.sendIndividualMessage(participant.phone, message);
+            // Prepare log data for individual reminder
+            const logData = {
+              meeting_id: meeting.id,
+              sender_type: 'scheduler',
+              recipient_id: participant.id.toString(),
+              recipient_name: participant.name,
+              meeting_title: meeting.title,
+              meeting_date: meeting.date,
+              meeting_time: meeting.start_time,
+              reminder_minutes: settings?.individual_reminder_minutes || 30
+            };
+            
+            await this.sendIndividualMessage(participant.phone, message, logData);
             results.push({ participant: participant.name, success: true });
           } catch (error) {
             console.error(`Error sending reminder to ${participant.name}:`, error);
@@ -356,16 +423,32 @@ class WhatsAppService {
 
   async reinitialize() {
     try {
+      // Safely destroy existing client
       if (this.client) {
-        await this.client.destroy();
+        try {
+          // Check if client has a valid session before destroying
+          if (this.client.pupPage && !this.client.pupPage.isClosed()) {
+            await this.client.destroy();
+          }
+        } catch (destroyError) {
+          console.warn('Warning during client destroy:', destroyError.message);
+          // Continue with reinitialization even if destroy fails
+        }
       }
       
+      // Reset all states
+      this.client = null;
       this.isInitialized = false;
       this.isConnected = false;
       this.qrCode = null;
       this.availableGroups = [];
       
+      // Initialize new client
       this.initializeClient();
+      
+      // Wait a moment before initializing
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       return await this.initialize();
     } catch (error) {
       console.error('Error reinitializing WhatsApp:', error);

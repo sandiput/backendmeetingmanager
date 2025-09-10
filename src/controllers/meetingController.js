@@ -1,4 +1,4 @@
-const { Meeting, Participant, Settings } = require("../models");
+const { Meeting, Participant, Settings, WhatsAppLog } = require("../models");
 const { validationResult } = require("express-validator");
 const { Op, DataTypes } = require("sequelize");
 const { normalizeTimeToISO } = require("../utils/validator");
@@ -486,7 +486,19 @@ class MeetingController {
           const settings = await Settings.findOne();
           if (settings && settings.whatsapp_group_id && settings.group_notification_enabled) {
             const message = settings.formatGroupMessage([meeting]);
-            await whatsappService.sendGroupMessage(settings.whatsapp_group_id, message);
+            
+            // Prepare log data for manual group reminder
+            const logData = {
+              meeting_id: meeting.id,
+              sender_type: 'manual',
+              group_name: 'Manual Group Reminder',
+              meeting_title: meeting.title,
+              meeting_date: meeting.date,
+              meeting_time: meeting.start_time,
+              participant_ids: meeting.participants.map(p => p.id)
+            };
+            
+            await whatsappService.sendGroupMessage(settings.whatsapp_group_id, message, logData);
             results.group = { success: true, message: 'Group reminder sent successfully' };
           } else {
             results.group = { success: false, message: 'Group notifications not configured' };
@@ -513,7 +525,18 @@ class MeetingController {
             for (const participant of targetParticipants) {
               if (participant.whatsapp_number) {
                 try {
-                  await whatsappService.sendIndividualMessage(participant.whatsapp_number, message);
+                  // Prepare log data for manual individual reminder
+                  const logData = {
+                    meeting_id: meeting.id,
+                    sender_type: 'manual',
+                    recipient_id: participant.id.toString(),
+                    recipient_name: participant.name,
+                    meeting_title: meeting.title,
+                    meeting_date: meeting.date,
+                    meeting_time: meeting.start_time
+                  };
+                  
+                  await whatsappService.sendIndividualMessage(participant.whatsapp_number, message, logData);
                   individualResults.push({ 
                     participant: participant.name, 
                     success: true 
