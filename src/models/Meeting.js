@@ -58,9 +58,6 @@ module.exports = (sequelize) => {
     discussion_results: {
       type: DataTypes.TEXT
     },
-    notes: {
-      type: DataTypes.TEXT
-    },
     status: {
       type: DataTypes.ENUM('upcoming', 'completed'),
       defaultValue: 'upcoming'
@@ -73,11 +70,9 @@ module.exports = (sequelize) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true
     },
-    reminder_sent_at: {
-      type: DataTypes.DATE
-    },
-    group_notification_sent_at: {
-      type: DataTypes.DATE
+    invited_by: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     sequelize,

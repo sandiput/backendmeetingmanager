@@ -71,11 +71,8 @@ class DashboardController {
           },
         }),
         Participant.count({ where: { is_active: true } }),
-        Meeting.count({
-          where: {
-            [Op.or]: [{ reminder_sent_at: { [Op.not]: null } }, { group_notification_sent_at: { [Op.not]: null } }],
-          },
-        }),
+        // Notifications feature has been removed
+        0,
       ]);
 
       // Log audit for dashboard stats view
@@ -154,11 +151,8 @@ class DashboardController {
 
       // Calculate additional statistics
       const avgDuration = await this.calculateAverageDuration(startDate, endDate);
-      const whatsappNotifications = await Meeting.count({
-        where: {
-          [Op.or]: [{ reminder_sent_at: { [Op.not]: null } }, { group_notification_sent_at: { [Op.not]: null } }],
-        },
-      });
+      // WhatsApp notifications feature has been removed
+      const whatsappNotifications = 0;
 
       // Calculate statistics
       const stats = {

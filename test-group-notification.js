@@ -47,8 +47,7 @@ async function testGroupNotification() {
         end_time: '11:00:00',
         location: 'Test Location',
         group_notification_enabled: true,
-        whatsapp_reminder_enabled: true,
-        group_notification_sent_at: null
+        whatsapp_reminder_enabled: true
       });
       
       console.log('Test meeting created:', testMeeting.id);
@@ -80,7 +79,7 @@ async function testGroupNotification() {
     });
     
     updatedMeetings.forEach(meeting => {
-      console.log(`- ${meeting.title}: group_notification_sent_at = ${meeting.group_notification_sent_at}`);
+      console.log(`- ${meeting.title}: status = ${meeting.status}`);
     });
     
     console.log('\nGroup notification test completed!');
