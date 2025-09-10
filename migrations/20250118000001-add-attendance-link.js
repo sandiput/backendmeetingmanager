@@ -2,14 +2,14 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.addColumn('meetings', 'invitation_letter_reference', {
+    await queryInterface.addColumn('meetings', 'attendance_link', {
       type: Sequelize.STRING,
       allowNull: true,
-      after: 'invited_by'
+      after: 'meeting_link'
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeColumn('meetings', 'invitation_letter_reference');
+    await queryInterface.removeColumn('meetings', 'attendance_link');
   }
 };

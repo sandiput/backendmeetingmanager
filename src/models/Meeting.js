@@ -77,6 +77,10 @@ module.exports = (sequelize) => {
     invitation_letter_reference: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    attendance_link: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     sequelize,
