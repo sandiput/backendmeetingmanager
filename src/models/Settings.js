@@ -23,7 +23,7 @@ class Settings extends Model {
     // Create tomorrow's date (H+1)
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     let message = this.notification_templates.group_daily.replace("{date}", formatDateIndonesian(tomorrow)).replace("{meetings}", meetingsText);
 
     // Replace individual meeting variables if there's only one meeting
@@ -72,14 +72,14 @@ class Settings extends Model {
 
     // Handle agenda - only show if exists
     if (meeting.agenda) {
-      message = message.replace("{agenda}", `📋 ${meeting.agenda}`);
+      message = message.replace("{agenda}", `\n   📋 ${meeting.agenda}`);
     } else {
       message = message.replace("{agenda}", "");
     }
 
     // Handle dress code - only show if exists
     if (meeting.dress_code) {
-      message = message.replace("{dress_code}", `👔 ${meeting.dress_code}`);
+      message = message.replace("{dress_code}", `\n   👔 ${meeting.dress_code}`);
     } else {
       message = message.replace("{dress_code}", "");
     }
@@ -87,14 +87,14 @@ class Settings extends Model {
     // Handle participants - only show if exists
     if (meeting.participants && meeting.participants.length > 0) {
       const participantNames = meeting.participants.map((p) => p.name).join(", ");
-      message = message.replace("{participants}", `👥 ${participantNames}`);
+      message = message.replace("{participants}", `\n   👥 ${participantNames}`);
     } else {
       message = message.replace("{participants}", "");
     }
 
     // Handle attendance link - only show if exists
     if (meeting.attendance_link) {
-      message = message.replace("{attendance_link}", `🔗 ${meeting.attendance_link}`);
+      message = message.replace("{attendance_link}", `\n   🔗 ${meeting.attendance_link}`);
     } else {
       message = message.replace("{attendance_link}", "");
     }
