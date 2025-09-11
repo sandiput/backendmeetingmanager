@@ -46,6 +46,7 @@ router.get("/dashboard/upcoming", meetingController.getUpcomingMeetings);
 // Review Routes
 router.get("/review/stats", (req, res) => dashboardController.getReviewStats(req, res));
 router.get("/review/top-participants", (req, res) => dashboardController.getTopParticipants(req, res));
+router.get("/review/top-invited-by", (req, res) => dashboardController.getTopInvitedBy(req, res));
 router.get("/review/seksi-stats", (req, res) => dashboardController.getSeksiStats(req, res));
 router.get("/review/meeting-trends", (req, res) => dashboardController.getMeetingTrends(req, res));
 router.get("/review/export-excel", (req, res) => dashboardController.exportExcel(req, res));
