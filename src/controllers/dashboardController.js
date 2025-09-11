@@ -440,14 +440,15 @@ class DashboardController {
 
       // Get all data for export with individual error handling
       console.log('Fetching data for export...');
-      let reviewStats, topParticipants, seksiStats, meetingTrends;
+      let reviewStats, topParticipants, seksiStats, meetingTrends, topInvitedBy;
       
       try {
-        [reviewStats, topParticipants, seksiStats, meetingTrends] = await Promise.all([
+        [reviewStats, topParticipants, seksiStats, meetingTrends, topInvitedBy] = await Promise.all([
           this.getReviewStatsData(period, customStartDate, customEndDate),
           this.getTopParticipantsData(period, customStartDate, customEndDate),
           this.getSeksiStatsData(period, customStartDate, customEndDate),
           this.getMeetingTrendsData(period, customStartDate, customEndDate),
+          this.getTopInvitedByData(period, customStartDate, customEndDate),
         ]);
         console.log('Data fetched successfully');
       } catch (dataError) {
@@ -456,7 +457,7 @@ class DashboardController {
       }
 
       // Validate data
-      if (!reviewStats || !topParticipants || !seksiStats || !meetingTrends) {
+      if (!reviewStats || !topParticipants || !seksiStats || !meetingTrends || !topInvitedBy) {
         throw new Error('One or more data sources returned null/undefined');
       }
 
@@ -479,14 +480,13 @@ class DashboardController {
       XLSX.utils.book_append_sheet(workbook, statsSheet, "Statistics");
 
       // Sheet 2: Top Participants
-      const participantsData = [["Name", "Seksi", "Meeting Count", "Attendance Rate (%)"]];
+      const participantsData = [["Name", "Seksi", "Meeting Count"]];
       if (Array.isArray(topParticipants)) {
         topParticipants.forEach((p) => {
           participantsData.push([
             p.name || 'Unknown',
             p.seksi || 'Unknown',
-            p.meeting_count || 0,
-            p.attendance_rate || 0
+            p.meeting_count || 0
           ]);
         });
       }
@@ -494,13 +494,11 @@ class DashboardController {
       XLSX.utils.book_append_sheet(workbook, participantsSheet, "Top Participants");
 
       // Sheet 3: Seksi Statistics
-      const seksiData = [["Seksi", "Participant Count", "Active Count", "Meeting Count"]];
+      const seksiData = [["Seksi", "Meeting Count"]];
       if (Array.isArray(seksiStats)) {
         seksiStats.forEach((s) => {
           seksiData.push([
             s.seksi || 'Unknown',
-            s.participant_count || 0,
-            s.active_count || 0,
             s.meeting_count || 0
           ]);
         });
@@ -521,6 +519,19 @@ class DashboardController {
       }
       const trendsSheet = XLSX.utils.aoa_to_sheet(trendsData);
       XLSX.utils.book_append_sheet(workbook, trendsSheet, "Meeting Trends");
+
+      // Sheet 5: Invited By
+      const invitedByData = [["Invited By", "Meeting Count"]];
+      if (Array.isArray(topInvitedBy)) {
+        topInvitedBy.forEach((i) => {
+          invitedByData.push([
+            i.invited_by || 'Unknown',
+            i.meeting_count || 0
+          ]);
+        });
+      }
+      const invitedBySheet = XLSX.utils.aoa_to_sheet(invitedByData);
+      XLSX.utils.book_append_sheet(workbook, invitedBySheet, "Invited By");
 
       console.log('Generating Excel buffer...');
       // Generate Excel buffer
@@ -636,27 +647,19 @@ class DashboardController {
   async getTopParticipantsData(period, customStartDate = null, customEndDate = null) {
     const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
 
-    const [participants] = await sequelize.query(
+    const participants = await sequelize.query(
       `
       SELECT 
         p.id,
         p.name,
         COALESCE(p.seksi, 'Unknown') as seksi,
-        COUNT(mp.meeting_id) as meeting_count,
-        ROUND(
-          CASE 
-            WHEN COUNT(mp.meeting_id) > 0 THEN 100.0
-            ELSE 0.0
-          END, 2
-        ) as attendance_rate
+        COUNT(CASE WHEN m.date BETWEEN ? AND ? THEN mp.meeting_id END) as meeting_count
       FROM participants p
       LEFT JOIN meeting_participants mp ON p.id = mp.participant_id
-      LEFT JOIN meetings m ON mp.meeting_id = m.id AND m.date BETWEEN ? AND ?
+      LEFT JOIN meetings m ON mp.meeting_id = m.id
       WHERE p.is_active = true
       GROUP BY p.id, p.name, p.seksi
-      HAVING COUNT(mp.meeting_id) > 0
       ORDER BY meeting_count DESC
-      LIMIT 10
     `,
       {
         replacements: [startDate, endDate],
@@ -670,7 +673,7 @@ class DashboardController {
   async getTopInvitedByData(period, customStartDate = null, customEndDate = null) {
     const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
 
-    const [invitedBy] = await sequelize.query(
+    const invitedBy = await sequelize.query(
       `
       SELECT 
         invited_by,
@@ -680,7 +683,6 @@ class DashboardController {
         AND date BETWEEN ? AND ?
       GROUP BY invited_by
       ORDER BY meeting_count DESC
-      LIMIT 5
     `,
       {
         replacements: [startDate, endDate],
@@ -694,18 +696,17 @@ class DashboardController {
   async getSeksiStatsData(period, customStartDate = null, customEndDate = null) {
     const { startDate, endDate } = this.getDateRange(period, customStartDate, customEndDate);
 
-    const [stats] = await sequelize.query(
+    const stats = await sequelize.query(
       `
       SELECT 
         COALESCE(p.seksi, 'Unknown') as seksi,
-        COUNT(p.id) as participant_count,
-        SUM(CASE WHEN p.is_active = true THEN 1 ELSE 0 END) as active_count,
-        COUNT(DISTINCT m.id) as meeting_count
+        COUNT(DISTINCT CASE WHEN m.date BETWEEN ? AND ? THEN m.id END) as meeting_count
       FROM participants p
       LEFT JOIN meeting_participants mp ON p.id = mp.participant_id
-      LEFT JOIN meetings m ON mp.meeting_id = m.id AND m.date BETWEEN ? AND ?
+      LEFT JOIN meetings m ON mp.meeting_id = m.id
+      WHERE p.is_active = true
       GROUP BY p.seksi
-      ORDER BY p.seksi
+      ORDER BY meeting_count DESC, p.seksi
     `,
       {
         replacements: [startDate, endDate],
@@ -820,20 +821,22 @@ class DashboardController {
         break;
     }
 
-    for (let i = intervals - 1; i >= 0; i--) {
+    for (let i = 0; i < intervals; i++) {
       let periodStart, periodEnd;
 
       if (period === "weekly") {
+        // Show days from Day 1 to Day 7 (7 days ago to today)
         periodStart = new Date(now);
-        periodStart.setDate(now.getDate() - i);
+        periodStart.setDate(now.getDate() - (6 - i)); // Start from 6 days ago and move forward
         periodStart.setHours(0, 0, 0, 0);
         periodEnd = new Date(periodStart);
         periodEnd.setHours(23, 59, 59, 999);
       } else if (period === "yearly") {
-        periodStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        periodEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
+        // Show months from January to December
+        periodStart = new Date(now.getFullYear(), i, 1);
+        periodEnd = new Date(now.getFullYear(), i + 1, 0, 23, 59, 59, 999);
       } else {
-        // Monthly - show last 4 weeks within current month
+        // Monthly - show weeks from Week 1 to Week 4
         const { startDate: monthStart, endDate: monthEnd } = this.getDateRange("monthly");
         const weekInMonth = Math.floor((monthEnd.getDate() - monthStart.getDate() + 1) / 4);
         
@@ -870,8 +873,18 @@ class DashboardController {
           }),
         ]);
 
+        let periodName;
+        if (period === "yearly") {
+          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          periodName = monthNames[i];
+        } else if (period === "weekly") {
+          periodName = `${periodLabel} ${i + 1}`; // Day 1, Day 2, ..., Day 7
+        } else {
+          periodName = `${periodLabel} ${i + 1}`; // Week 1, Week 2, Week 3, Week 4
+        }
+        
         trends.push({
-          period: `${periodLabel} ${intervals - i}`,
+          period: periodName,
           count: meetings || 0,
           completion_rate: meetings > 0 ? Math.round((completedMeetings / meetings) * 100 * 100) / 100 : 0,
         });
