@@ -25,6 +25,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api', require('./routes/api'));
 app.use('/api/whatsapp', require('./routes/whatsapp'));
+app.use('/api/attachments', require('./routes/attachments'));
 
 
 // Error handling middleware

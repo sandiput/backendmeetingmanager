@@ -6,6 +6,7 @@ const Participant = require('./Participant')(sequelize);
 const Settings = require('./Settings');
 const MeetingParticipant = require('./MeetingParticipant');
 const MeetingFile = require('./MeetingFile');
+const Attachment = require('./Attachment')(sequelize);
 const AuditLog = require('./audit_log');
 const WhatsAppLog = require('./WhatsAppLog');
 const DaftarKantor = require('./DaftarKantor')(sequelize);
@@ -37,6 +38,16 @@ MeetingFile.belongsTo(Meeting, {
   as: 'meeting'
 });
 
+Meeting.hasMany(Attachment, {
+  foreignKey: 'meeting_id',
+  as: 'attachments'
+});
+
+Attachment.belongsTo(Meeting, {
+  foreignKey: 'meeting_id',
+  as: 'meeting'
+});
+
 module.exports = {
   sequelize,
   Meeting,
@@ -44,6 +55,7 @@ module.exports = {
   Settings,
   MeetingParticipant,
   MeetingFile,
+  Attachment,
   AuditLog,
   WhatsAppLog,
   DaftarKantor
