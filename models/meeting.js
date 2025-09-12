@@ -14,6 +14,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "meeting_id",
         as: "notification_logs",
       });
+
+      Meeting.hasMany(models.Attachment, {
+        foreignKey: "meeting_id",
+        as: "attachments",
+      });
     }
   }
 

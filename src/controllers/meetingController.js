@@ -1,4 +1,4 @@
-const { Meeting, Participant, Settings, WhatsAppLog } = require("../models");
+const { Meeting, Participant, Settings, WhatsAppLog, Attachment } = require("../models");
 const { validationResult } = require("express-validator");
 const { Op, DataTypes } = require("sequelize");
 const { normalizeTimeToISO } = require("../utils/validator");
@@ -37,6 +37,11 @@ class MeetingController {
               as: "participants",
               attributes: ["name", "seksi"],
               through: { attributes: [] },
+            },
+            {
+              model: Attachment,
+              as: "attachments",
+              attributes: ["id", "original_filename", "filename", "file_path", "file_size", "file_type", "file_category"],
             },
           ],
         });
@@ -78,6 +83,11 @@ class MeetingController {
               as: "participants",
               attributes: ["name", "seksi"],
               through: { attributes: [] },
+            },
+            {
+              model: Attachment,
+              as: "attachments",
+              attributes: ["id", "original_filename", "filename", "file_path", "file_size", "file_type", "file_category"],
             },
           ],
         });
@@ -133,6 +143,11 @@ class MeetingController {
             attributes: ["name", "seksi"],
             through: { attributes: [] },
           },
+          {
+            model: Attachment,
+            as: "attachments",
+            attributes: ["id", "original_filename", "filename", "file_path", "file_size", "file_type", "file_category"],
+          },
         ],
       });
 
@@ -167,6 +182,11 @@ class MeetingController {
             as: "participants",
             attributes: ["name", "seksi"],
             through: { attributes: [] },
+          },
+          {
+            model: Attachment,
+            as: "attachments",
+            attributes: ["id", "original_filename", "filename", "file_path", "file_size", "file_type", "file_category"],
           },
         ],
       });
@@ -635,6 +655,11 @@ class MeetingController {
             as: "participants",
             attributes: ["id", "name", "seksi"],
             through: { attributes: [] },
+          },
+          {
+            model: Attachment,
+            as: "attachments",
+            attributes: ["id", "original_filename", "filename", "file_path", "file_size", "file_type", "file_category"],
           },
         ],
       });
