@@ -9,7 +9,11 @@ const { Attachment } = require('../models');
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../../uploads/attachments');
+    // Determine directory based on file category from request body
+    const fileCategory = req.body.fileCategory || 'attachment';
+    const subDir = fileCategory === 'photo' ? 'photos' : 'attachments';
+    const uploadDir = path.join(__dirname, `../../uploads/${subDir}`);
+    
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -63,11 +67,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
+    // Create relative path for database storage
+    const subDir = fileCategory === 'photo' ? 'photos' : 'attachments';
+    const relativePath = `uploads/${subDir}/${req.file.filename}`;
+    
     const attachment = await Attachment.create({
       meeting_id: meetingId,
       original_filename: req.file.originalname,
       filename: req.file.filename,
-      file_path: req.file.path,
+      file_path: relativePath,
       file_size: req.file.size,
       file_type: req.file.mimetype,
       file_category: fileCategory
@@ -150,9 +158,10 @@ router.get('/download/:id', async (req, res) => {
       });
     }
 
-    const filePath = attachment.file_path;
+    // Convert relative path to absolute path
+    const absolutePath = path.join(__dirname, '../../', attachment.file_path);
     
-    if (!fs.existsSync(filePath)) {
+    if (!fs.existsSync(absolutePath)) {
       return res.status(404).json({
         success: false,
         message: 'File not found on disk'
@@ -162,7 +171,7 @@ router.get('/download/:id', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${attachment.original_filename}"`);
     res.setHeader('Content-Type', attachment.file_type);
     
-    const fileStream = fs.createReadStream(filePath);
+    const fileStream = fs.createReadStream(absolutePath);
     fileStream.pipe(res);
   } catch (error) {
     console.error('Download error:', error);
@@ -188,8 +197,9 @@ router.delete('/:id', async (req, res) => {
     }
     
     // Delete file from disk
-    if (fs.existsSync(attachment.file_path)) {
-      fs.unlinkSync(attachment.file_path);
+    const absolutePath = path.join(__dirname, '../../', attachment.file_path);
+    if (fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath);
     }
     
     // Remove from database
