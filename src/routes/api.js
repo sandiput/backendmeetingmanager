@@ -19,7 +19,6 @@ const validateMeeting = [
   body("title").notEmpty().trim(),
   body("date").isDate(),
   body("location").notEmpty().trim(),
-  body("designated_attendees").optional().isArray(),
   body("dress_code").optional().trim(),
   body("agenda").optional().trim(),
   body("discussion_results").optional().trim(),

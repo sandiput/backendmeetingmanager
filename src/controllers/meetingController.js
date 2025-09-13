@@ -232,15 +232,16 @@ class MeetingController {
         });
       }
 
-      // Find participants by name (if designated_attendees is provided)
+      // Find participants by name (if participants is provided)
       let participants = [];
       if (
-        req.body.designated_attendees &&
-        Array.isArray(req.body.designated_attendees)
+        req.body.participants &&
+        Array.isArray(req.body.participants)
       ) {
+        const participantNames = req.body.participants.map(p => p.name || p);
         participants = await Participant.findAll({
           where: {
-            name: { [Op.in]: req.body.designated_attendees },
+            name: { [Op.in]: participantNames },
           },
         });
       }
@@ -322,15 +323,9 @@ class MeetingController {
       const meetingId = meeting.id;
       console.log("Found meeting with ID:", meetingId);
 
-      // Update participants if designated_attendees or participants is provided
-      if (req.body.designated_attendees || req.body.participants) {
-        let participantNames = [];
-        
-        if (req.body.designated_attendees) {
-          participantNames = req.body.designated_attendees;
-        } else if (req.body.participants) {
-          participantNames = req.body.participants.map(p => p.name);
-        }
+      // Update participants if participants is provided
+      if (req.body.participants) {
+        const participantNames = req.body.participants.map(p => p.name || p);
         
         const participants = await Participant.findAll({
           where: {
@@ -367,7 +362,7 @@ class MeetingController {
       const updateData = { ...req.body };
       delete updateData.id;
       delete updateData.participants; // Remove participants as it's not a Meeting field
-      delete updateData.designated_attendees; // Remove designated_attendees as it's not a Meeting field
+      // designated_attendees is no longer used
 
       // Use time data as is without normalization
 
