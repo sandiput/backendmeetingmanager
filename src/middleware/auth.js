@@ -1,5 +1,7 @@
 const { AppError } = require('../utils/logger');
 const APP_CONSTANTS = require('../config/constants');
+const jwt = require('jsonwebtoken');
+const Admin = require('../models/admin');
 
 // Basic authentication middleware
 const basicAuth = (req, res, next) => {
@@ -7,7 +9,10 @@ const basicAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
-    return next(new AppError('Authentication required', 401));
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
   }
 
   try {
@@ -23,10 +28,16 @@ const basicAuth = (req, res, next) => {
     ) {
       next();
     } else {
-      next(new AppError('Invalid credentials', 401));
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
   } catch (error) {
-    next(new AppError('Invalid authentication format', 401));
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid authentication format'
+    });
   }
 };
 
@@ -35,11 +46,17 @@ const apiKeyAuth = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
 
   if (!apiKey) {
-    return next(new AppError('API key is required', 401));
+    return res.status(401).json({
+      success: false,
+      message: 'API key is required'
+    });
   }
 
   if (apiKey !== process.env.API_KEY) {
-    return next(new AppError('Invalid API key', 401));
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid API key'
+    });
   }
 
   next();
@@ -56,7 +73,10 @@ const ipWhitelist = (req, res, next) => {
   }
 
   if (!whitelist.includes(clientIp)) {
-    return next(new AppError('Access denied from this IP address', 403));
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied from this IP address'
+    });
   }
 
   next();
@@ -66,11 +86,17 @@ const ipWhitelist = (req, res, next) => {
 const checkRole = (allowedRoles) => {
   return (req, res, next) => {
     if (!req.user || !req.user.role) {
-      return next(new AppError('User role not found', 403));
+      return res.status(403).json({
+        success: false,
+        message: 'User role not found'
+      });
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return next(new AppError('Access denied for this role', 403));
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied for this role'
+      });
     }
 
     next();
@@ -85,7 +111,10 @@ const validateOrigin = (req, res, next) => {
   if (!origin || allowedOrigins.includes(origin)) {
     next();
   } else {
-    next(new AppError('Invalid origin', 403));
+    return res.status(403).json({
+      success: false,
+      message: 'Invalid origin'
+    });
   }
 };
 
@@ -94,7 +123,10 @@ const validateMethod = (req, res, next) => {
   const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
   if (!allowedMethods.includes(req.method)) {
-    return next(new AppError(`Method ${req.method} not allowed`, 405));
+    return res.status(405).json({
+      success: false,
+      message: `Method ${req.method} not allowed`
+    });
   }
 
   next();
@@ -105,7 +137,10 @@ const validateContentType = (req, res, next) => {
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     const contentType = req.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      return next(new AppError('Content-Type must be application/json', 415));
+      return res.status(415).json({
+        success: false,
+        message: 'Content-Type must be application/json'
+      });
     }
   }
 
@@ -117,10 +152,108 @@ const validateRequestSize = (req, res, next) => {
   const contentLength = parseInt(req.get('content-length') || '0');
 
   if (contentLength > APP_CONSTANTS.REQUEST.MAX_SIZE) {
-    return next(new AppError('Request entity too large', 413));
+    return res.status(413).json({
+      success: false,
+      message: 'Request entity too large'
+    });
   }
 
   next();
+};
+
+// Admin authentication middleware using HttpOnly cookies
+const authenticateAdmin = async (req, res, next) => {
+  try {
+    // Get token from HttpOnly cookie
+    const token = req.cookies.admin_token;
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. Admin token required.'
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    
+    // Find admin by ID from token
+    const admin = await Admin.findByPk(decoded.adminId);
+    
+    if (!admin || !admin.is_active) {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid admin token.'
+      });
+    }
+
+    // Store admin data in request object
+    req.admin = admin;
+    next();
+    
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid admin token.'
+      });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired. Please login again.'
+      });
+    }
+    
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error.'
+    });
+  }
+};
+
+// Middleware to check admin role
+const requireAdminRole = (roles) => {
+  return (req, res, next) => {
+    if (!req.admin) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized.'
+      });
+    }
+
+    if (!roles.includes(req.admin.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Role tidak mencukupi.'
+      });
+    }
+
+    next();
+  };
+};
+
+// Middleware to check auth status (optional)
+const checkAdminAuthStatus = async (req, res, next) => {
+  try {
+    const token = req.cookies.admin_token;
+    
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      const admin = await Admin.findByPk(decoded.adminId);
+      
+      if (admin && admin.is_active) {
+        req.admin = admin;
+      }
+    }
+    
+    next();
+  } catch (error) {
+    // If error, continue without setting req.admin
+    next();
+  }
 };
 
 module.exports = {
@@ -131,5 +264,8 @@ module.exports = {
   validateOrigin,
   validateMethod,
   validateContentType,
-  validateRequestSize
+  validateRequestSize,
+  authenticateAdmin,
+  requireAdminRole,
+  checkAdminAuthStatus
 };

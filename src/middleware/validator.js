@@ -237,10 +237,45 @@ const searchValidation = [
   validate
 ];
 
+// Admin validation rules
+const adminValidation = {
+  login: [
+    body('username')
+      .notEmpty()
+      .trim()
+      .withMessage('Username is required')
+      .isLength({ min: 3, max: 50 })
+      .withMessage('Username must be between 3 and 50 characters'),
+
+    body('password')
+      .notEmpty()
+      .withMessage('Password is required')
+      .isLength({ min: 6 })
+      .withMessage('Password must be at least 6 characters long'),
+
+    validate
+  ],
+
+  changePassword: [
+    body('currentPassword')
+      .notEmpty()
+      .withMessage('Current password is required'),
+
+    body('newPassword')
+      .notEmpty()
+      .withMessage('New password is required')
+      .isLength({ min: 6 })
+      .withMessage('New password must be at least 6 characters long'),
+
+    validate
+  ]
+};
+
 module.exports = {
   meetingValidation,
   participantValidation,
   settingsValidation,
   paginationValidation,
-  searchValidation
+  searchValidation,
+  adminValidation
 };

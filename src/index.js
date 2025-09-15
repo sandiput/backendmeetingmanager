@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const { sequelize } = require('./config/database');
 const cron = require('node-cron');
 const ScheduledJobs = require('./jobs/scheduledJobs');
@@ -9,8 +10,15 @@ const WhatsAppScheduler = require('./jobs/whatsappScheduler');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+// Serve static files for uploads
+app.use('/uploads', express.static('uploads'));
 
 // Database connection
 sequelize.authenticate()
@@ -26,6 +34,8 @@ app.get('/', (req, res) => {
 app.use('/api', require('./routes/api'));
 app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/attachments', require('./routes/attachments'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/profile', require('./routes/profile'));
 
 
 // Error handling middleware
