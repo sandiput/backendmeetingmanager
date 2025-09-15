@@ -95,7 +95,7 @@ class SettingsController {
         old_values: oldValues,
         new_values: updatedSettings.toJSON(),
         changed_fields: changedFields,
-        description: `Ubah Pengaturan Sistem: ${changedFields.join(", ")}`,
+
         success: true,
       });
 

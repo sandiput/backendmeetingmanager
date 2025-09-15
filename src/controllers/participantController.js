@@ -173,10 +173,9 @@ class ParticipantController {
         action_type: 'UPDATE',
         table_name: 'participants',
         record_id: participant.id,
-        old_values: JSON.stringify(oldValues),
-        new_values: JSON.stringify(participant.toJSON()),
+        old_values: oldValues,
+        new_values: participant.toJSON(),
         changed_fields: changedFields.join(','),
-        description: `Ubah Peserta: ${participant.name}`,
         success: true
       });
       

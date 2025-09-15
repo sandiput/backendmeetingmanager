@@ -270,7 +270,7 @@ class MeetingController {
         record_id: meeting.id,
         new_values: JSON.stringify(meeting.toJSON()),
         changed_fields: Object.keys(meetingData).join(","),
-        description: `Buat Meeting Baru: ${meeting.title}`,
+        description: meeting.title,
         success: true,
       });
 
@@ -398,10 +398,9 @@ class MeetingController {
         action_type: "UPDATE",
         table_name: "meetings",
         record_id: meeting.id,
-        old_values: JSON.stringify(oldValues),
-        new_values: JSON.stringify(meeting.toJSON()),
+        old_values: oldValues,
+        new_values: meeting.toJSON(),
         changed_fields: changedFields.join(","),
-        description: `Ubah Meeting: ${meeting.title}`,
         success: true,
       });
 
@@ -441,8 +440,7 @@ class MeetingController {
         action_type: "DELETE",
         table_name: "meetings",
         record_id: req.params.id,
-        old_values: JSON.stringify(deletedMeetingData),
-        description: `Hapus Meeting: ${deletedMeetingData.title}`,
+        old_values: deletedMeetingData,
         success: true,
       });
 

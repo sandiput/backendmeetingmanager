@@ -74,9 +74,9 @@ function extractRecordId(req) {
 }
 
 /**
- * Generate human-readable description in Indonesian
+ * Generate simple title for audit log
  */
-function generateDescription(actionType, tableName, recordId, req) {
+function generateTitle(actionType, tableName, req) {
   const baseActions = {
     'CREATE': 'Buat',
     'READ': 'Lihat',
@@ -98,38 +98,145 @@ function generateDescription(actionType, tableName, recordId, req) {
   const action = baseActions[actionType] || actionType;
   const table = tableNames[tableName] || tableName;
   
-  // Special cases for specific endpoints and operations
+  // Special cases for specific endpoints
   if (req.path.includes('/search')) {
-    return `Cari Data ${table}`;
+    return `Cari ${table}`;
   } else if (req.path.includes('/dashboard')) {
-    return `Akses Statistik Dashboard`;
+    return `Akses Dashboard`;
   } else if (req.path.includes('/stats')) {
-    return `Lihat Statistik ${table}`;
+    return `Lihat Statistik`;
   } else if (req.path.includes('/trends')) {
-    return `Lihat Trend Meeting`;
+    return `Lihat Trend`;
   } else if (req.path.includes('/top-participants')) {
-    return `Lihat Top Peserta Aktif`;
+    return `Lihat Top Peserta`;
   } else if (req.path.includes('/test-whatsapp')) {
-    return `Test Koneksi WhatsApp`;
+    return `Test WhatsApp`;
   } else if (req.path.includes('/templates')) {
-    return `${action} Template Pesan`;
+    return `${action} Template`;
   } else if (req.path.includes('/whatsapp-group')) {
     return `${action} Grup WhatsApp`;
   }
   
-  // Standard CRUD operations
-  if (recordId) {
-    return `${action} ${table} (ID: ${recordId})`;
-  }
-  
-  // General operations
-  if (actionType === 'CREATE') {
-    return `${action} ${table} Baru`;
-  } else if (actionType === 'READ') {
-    return `${action} Daftar ${table}`;
-  }
-  
   return `${action} ${table}`;
+}
+
+/**
+ * Generate description with specific data (title, name, etc.)
+ */
+function generateDescription(req, responseData, newValues, oldValues) {
+  let description = '';
+  
+  // For UPDATE actions, try to get name from newValues or oldValues first
+  if (newValues) {
+    if (newValues.title) {
+      description = newValues.title;
+    } else if (newValues.name) {
+      description = newValues.name;
+    } else if (newValues.full_name) {
+      description = newValues.full_name;
+    } else if (newValues.username) {
+      description = newValues.username;
+    }
+  }
+  
+  // If not found in newValues, try oldValues
+  if (!description && oldValues) {
+    if (oldValues.title) {
+      description = oldValues.title;
+    } else if (oldValues.name) {
+      description = oldValues.name;
+    } else if (oldValues.full_name) {
+      description = oldValues.full_name;
+    } else if (oldValues.username) {
+      description = oldValues.username;
+    }
+  }
+  
+  // Extract meaningful data from request body or response as fallback
+  if (!description && req.body) {
+    if (req.body.title) {
+      description = req.body.title;
+    } else if (req.body.name) {
+      description = req.body.name;
+    } else if (req.body.full_name) {
+      description = req.body.full_name;
+    } else if (req.body.username) {
+      description = req.body.username;
+    }
+  }
+  
+  // Extract from response data if available as final fallback
+  if (!description && responseData && responseData.data) {
+    const data = responseData.data;
+    if (data.title) {
+      description = data.title;
+    } else if (data.name) {
+      description = data.name;
+    } else if (data.full_name) {
+      description = data.full_name;
+    } else if (data.username) {
+      description = data.username;
+    }
+  }
+  
+  return description;
+}
+
+/**
+ * Generate detailed description of changes
+ */
+function generateDescriptionDetail(req, originalData, newData) {
+  const changes = [];
+  
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return '';
+  }
+  
+  // Compare original data with new data to track changes
+  if (originalData && newData) {
+    Object.keys(req.body).forEach(key => {
+      if (originalData[key] !== undefined && originalData[key] !== newData[key]) {
+        const fieldNames = {
+          'title': 'judul',
+          'name': 'nama',
+          'full_name': 'nama lengkap',
+          'username': 'username',
+          'email': 'email',
+          'whatsapp_number': 'nomor WhatsApp',
+          'phone_number': 'nomor telepon',
+          'date': 'tanggal',
+          'time': 'waktu',
+          'location': 'lokasi',
+          'description': 'deskripsi',
+          'status': 'status'
+        };
+        
+        const fieldName = fieldNames[key] || key;
+        changes.push(`mengubah ${fieldName} dari "${originalData[key]}" menjadi "${newData[key]}"`);
+      }
+    });
+  } else {
+    // For new records, list the main fields
+    const mainFields = ['title', 'name', 'full_name', 'username', 'email', 'date', 'time', 'location'];
+    mainFields.forEach(field => {
+      if (req.body[field]) {
+        const fieldNames = {
+          'title': 'judul',
+          'name': 'nama',
+          'full_name': 'nama lengkap',
+          'username': 'username',
+          'email': 'email',
+          'date': 'tanggal',
+          'time': 'waktu',
+          'location': 'lokasi'
+        };
+        const fieldName = fieldNames[field] || field;
+        changes.push(`${fieldName}: "${req.body[field]}"`);
+      }
+    });
+  }
+  
+  return changes.join(', ');
 }
 
 /**
@@ -195,9 +302,12 @@ async function logAuditEntry(req, res, responseData, startTime, sessionId, ipAdd
     const tableName = determineTableName(req.path);
     const recordId = extractRecordId(req);
     const success = res.statusCode < 400;
+    const title = generateTitle(actionType, tableName, req);
+    const description = generateDescription(req, responseData, null, null);
+    const descriptionDetail = generateDescriptionDetail(req, null, responseData ? responseData.data : null);
     
     const auditData = {
-      user_id: null, // No login system
+      user_id: req.admin ? req.admin.id : null, // Get user ID from authenticated admin
       session_id: sessionId,
       ip_address: ipAddress,
       user_agent: req.headers['user-agent'] || null,
@@ -209,7 +319,9 @@ async function logAuditEntry(req, res, responseData, startTime, sessionId, ipAdd
       old_values: null, // Will be populated by specific controllers
       new_values: null, // Will be populated by specific controllers
       changed_fields: null, // Will be populated by specific controllers
-      description: generateDescription(actionType, tableName, recordId, req),
+      title: title,
+      description: description,
+      description_detail: descriptionDetail,
       success: success,
       error_message: success ? null : (responseData && responseData.error ? responseData.error : null),
       execution_time_ms: executionTime,
@@ -233,7 +345,7 @@ async function logAuditEntry(req, res, responseData, startTime, sessionId, ipAdd
 const logDetailedAudit = async (req, options) => {
   try {
     // Support both old format (multiple parameters) and new format (options object)
-    let actionType, tableName, recordId, oldValues, newValues, description, success, errorMessage;
+    let actionType, tableName, recordId, oldValues, newValues, description, success, errorMessage, customTitle;
     
     if (typeof options === 'string') {
       // Old format: logDetailedAudit(req, actionType, tableName, recordId, oldValues, newValues, description)
@@ -245,16 +357,18 @@ const logDetailedAudit = async (req, options) => {
       description = arguments[6];
       success = true;
       errorMessage = null;
+      customTitle = null;
     } else {
       // New format: logDetailedAudit(req, { action_type, table_name, description, ... })
-      actionType = options.action_type;
-      tableName = options.table_name;
-      recordId = options.record_id || null;
-      oldValues = options.old_values || null;
-      newValues = options.new_values || null;
-      description = options.description;
+      actionType = options.action_type || options.actionType;
+      tableName = options.table_name || options.tableName;
+      recordId = options.record_id || options.recordId || null;
+      oldValues = options.old_values || options.oldValues || null;
+      newValues = options.new_values || options.newValues || null;
+      description = options.description || options.customDescription;
       success = options.success !== undefined ? options.success : true;
-      errorMessage = options.error_message || null;
+      errorMessage = options.error_message || options.error || null;
+      customTitle = options.customTitle || null;
     }
     
     const sessionId = req.headers['x-session-id'] || generateSessionId(req);
@@ -272,8 +386,13 @@ const logDetailedAudit = async (req, options) => {
       changedFields = ['deleted'];
     }
     
+    // Generate title, description, and description detail
+    const title = customTitle || generateTitle(actionType.toUpperCase(), tableName, req);
+    const finalDescription = description || generateDescription(req, options.responseData, newValues, oldValues);
+    const descriptionDetail = generateDescriptionDetail(req, oldValues, newValues);
+    
     const auditData = {
-      user_id: null,
+      user_id: req.admin ? req.admin.id : null, // Get user ID from authenticated admin
       session_id: sessionId,
       ip_address: ipAddress,
       user_agent: req.headers['user-agent'] || null,
@@ -285,7 +404,9 @@ const logDetailedAudit = async (req, options) => {
       old_values: oldValues,
       new_values: newValues,
       changed_fields: changedFields,
-      description: description || generateDescription(actionType.toUpperCase(), tableName, recordId, req),
+      title: title,
+      description: finalDescription,
+      description_detail: descriptionDetail,
       success: success,
       error_message: errorMessage,
       execution_time_ms: null,
@@ -306,5 +427,8 @@ module.exports = {
   generateSessionId,
   determineActionType,
   determineTableName,
+  generateTitle,
+  generateDescription,
+  generateDescriptionDetail,
   sanitizePayload
 };

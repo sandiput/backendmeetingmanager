@@ -77,10 +77,20 @@ const AuditLog = sequelize.define('AuditLog', {
   },
   
   // Context
+  title: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Simple title of the action (e.g., Buat Meeting, Hapus Peserta)'
+  },
   description: {
     type: DataTypes.TEXT,
-    allowNull: false,
-    comment: 'Human-readable description of the action'
+    allowNull: true,
+    comment: 'Specific data description (e.g., meeting title, participant name)'
+  },
+  description_detail: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Detailed description of changes made'
   },
   success: {
     type: DataTypes.BOOLEAN,

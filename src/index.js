@@ -6,6 +6,8 @@ const { sequelize } = require('./config/database');
 const cron = require('node-cron');
 const ScheduledJobs = require('./jobs/scheduledJobs');
 const WhatsAppScheduler = require('./jobs/whatsappScheduler');
+const { auditLogger } = require('./middleware/auditLogger');
+const { checkAdminAuthStatus } = require('./middleware/auth');
 
 const app = express();
 
@@ -16,6 +18,12 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Check admin auth status for all requests (optional auth)
+app.use(checkAdminAuthStatus);
+
+// Audit logging middleware (must be after auth middleware)
+app.use(auditLogger);
 
 // Serve static files for uploads
 app.use('/uploads', express.static('uploads'));

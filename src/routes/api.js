@@ -1,13 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const { body } = require("express-validator");
+const { authenticateAdmin } = require("../middleware/auth");
 
-// Controllers
+// Import controllers
 const meetingController = require("../controllers/meetingController");
 const participantController = require("../controllers/participantController");
 const settingsController = require("../controllers/settingsController");
 const dashboardController = require("../controllers/dashboardController");
 const daftarKantorController = require("../controllers/daftarKantorController");
+const recentActivityController = require("../controllers/recentActivityController");
 
 // Health Check Route
 router.get("/health", (req, res) => {
@@ -39,44 +41,47 @@ const validateSettings = [
 ];
 
 // Dashboard Routes
-router.get("/dashboard/stats", (req, res) => dashboardController.getStats(req, res));
-router.get("/dashboard/upcoming", meetingController.getUpcomingMeetings);
+router.get("/dashboard/stats", authenticateAdmin, (req, res) => dashboardController.getStats(req, res));
+router.get("/dashboard/upcoming", authenticateAdmin, meetingController.getUpcomingMeetings);
 
 // Review Routes
-router.get("/review/stats", (req, res) => dashboardController.getReviewStats(req, res));
-router.get("/review/top-participants", (req, res) => dashboardController.getTopParticipants(req, res));
-router.get("/review/top-invited-by", (req, res) => dashboardController.getTopInvitedBy(req, res));
-router.get("/review/seksi-stats", (req, res) => dashboardController.getSeksiStats(req, res));
-router.get("/review/meeting-trends", (req, res) => dashboardController.getMeetingTrends(req, res));
-router.get("/review/export-excel", (req, res) => dashboardController.exportExcel(req, res));
+router.get("/review/stats", authenticateAdmin, (req, res) => dashboardController.getReviewStats(req, res));
+router.get("/review/top-participants", authenticateAdmin, (req, res) => dashboardController.getTopParticipants(req, res));
+router.get("/review/top-invited-by", authenticateAdmin, (req, res) => dashboardController.getTopInvitedBy(req, res));
+router.get("/review/seksi-stats", authenticateAdmin, (req, res) => dashboardController.getSeksiStats(req, res));
+router.get("/review/meeting-trends", authenticateAdmin, (req, res) => dashboardController.getMeetingTrends(req, res));
+router.get("/review/export-excel", authenticateAdmin, (req, res) => dashboardController.exportExcel(req, res));
 
 // Meeting Routes
-router.get("/meetings", meetingController.getAllMeetings);
-router.get("/meetings/search", meetingController.searchMeetings);
-router.get("/meetings/upcoming", meetingController.getUpcomingMeetings);
+router.get("/meetings", authenticateAdmin, meetingController.getAllMeetings);
+router.get("/meetings/search", authenticateAdmin, meetingController.searchMeetings);
+router.get("/meetings/upcoming", authenticateAdmin, meetingController.getUpcomingMeetings);
 // Removed incorrect endpoint format
-router.get("/meetings/:id", meetingController.getMeeting);
-router.post("/meetings", validateMeeting, meetingController.createMeeting);
-router.put("/meetings/:id", validateMeeting, meetingController.updateMeeting);
-router.delete("/meetings/:id", meetingController.deleteMeeting);
-router.post("/meetings/:id/send-reminder", meetingController.sendReminder);
+router.get("/meetings/:id", authenticateAdmin, meetingController.getMeeting);
+router.post("/meetings", authenticateAdmin, validateMeeting, meetingController.createMeeting);
+router.put("/meetings/:id", authenticateAdmin, validateMeeting, meetingController.updateMeeting);
+router.delete("/meetings/:id", authenticateAdmin, meetingController.deleteMeeting);
+router.post("/meetings/:id/send-reminder", authenticateAdmin, meetingController.sendReminder);
 
 // Participant Routes
-router.get("/participants", (req, res) => participantController.getAllParticipants(req, res));
-router.get("/participants/search/:query", (req, res) => participantController.searchParticipants(req, res));
-router.get("/participants/seksi/:seksi", (req, res) => participantController.getParticipantsBySeksi(req, res));
-router.get("/participants/:id", (req, res) => participantController.getParticipant(req, res));
+router.get("/participants", authenticateAdmin, (req, res) => participantController.getAllParticipants(req, res));
+router.get("/participants/search/:query", authenticateAdmin, (req, res) => participantController.searchParticipants(req, res));
+router.get("/participants/seksi/:seksi", authenticateAdmin, (req, res) => participantController.getParticipantsBySeksi(req, res));
+router.get("/participants/:id", authenticateAdmin, (req, res) => participantController.getParticipant(req, res));
 router.post("/participants", validateParticipant, (req, res) => participantController.createParticipant(req, res));
 router.put("/participants/:id", validateParticipant, (req, res) => participantController.updateParticipant(req, res));
 router.delete("/participants/:id", (req, res) => participantController.deleteParticipant(req, res));
 
 // Settings Routes
-router.get("/settings", settingsController.getSettings);
+router.get("/settings", authenticateAdmin, settingsController.getSettings);
 router.put("/settings", validateSettings, settingsController.updateSettings);
 router.put("/settings/templates", settingsController.updateTemplates);
 
 // Daftar Kantor Routes
-router.get("/kantor", daftarKantorController.getAllKantor);
-router.get("/kantor/search/:query", daftarKantorController.searchKantor);
+router.get("/kantor", authenticateAdmin, daftarKantorController.getAllKantor);
+router.get("/kantor/search/:query", authenticateAdmin, daftarKantorController.searchKantor);
+
+// Recent Activity Routes
+router.get("/recent-activities", authenticateAdmin, recentActivityController.getRecentActivities);
 
 module.exports = router;
