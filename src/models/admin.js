@@ -65,6 +65,11 @@ const Admin = sequelize.define('Admin', {
     type: DataTypes.STRING(20),
     allowNull: true,
     comment: 'User WhatsApp number'
+  },
+  ip_address: {
+    type: DataTypes.STRING(45),
+    allowNull: true,
+    comment: 'Last login IP address (supports IPv6)'
   }
 }, {
   tableName: 'admins',
@@ -110,7 +115,7 @@ Admin.findByEmail = async function(email) {
   });
 };
 
-Admin.authenticate = async function(usernameOrEmail, password) {
+Admin.authenticate = async function(usernameOrEmail, password, ipAddress = null) {
   const admin = await this.findOne({
     where: {
       [sequelize.Sequelize.Op.or]: [
@@ -130,8 +135,15 @@ Admin.authenticate = async function(usernameOrEmail, password) {
     return null;
   }
 
-  // Update last login
-  await admin.update({ last_login: new Date() });
+  // Update last login and IP address
+  const updateData = { last_login: new Date() };
+  if (ipAddress) {
+    updateData.ip_address = ipAddress;
+  }
+  await admin.update(updateData);
+  
+  // Reload admin to get updated values
+  await admin.reload();
   
   return admin;
 };

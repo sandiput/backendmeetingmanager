@@ -12,8 +12,11 @@ const loginAdmin = async (req, res, next) => {
       return next(new AppError('Username dan password harus diisi.', 400));
     }
 
+    // Get client IP address
+    const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+
     // Autentikasi admin
-    const admin = await Admin.authenticate(username, password);
+    const admin = await Admin.authenticate(username, password, ipAddress);
     
     if (!admin) {
       return next(new AppError('Username atau password salah.', 401));
@@ -53,7 +56,8 @@ const loginAdmin = async (req, res, next) => {
           role: admin.role,
           whatsapp_number: admin.whatsapp_number,
           profile_picture: admin.profile_picture,
-          last_login: admin.last_login
+          last_login: admin.last_login,
+          ip_address: admin.ip_address
         }
       }
     });

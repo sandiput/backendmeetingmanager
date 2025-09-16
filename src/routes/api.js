@@ -10,6 +10,7 @@ const settingsController = require("../controllers/settingsController");
 const dashboardController = require("../controllers/dashboardController");
 const daftarKantorController = require("../controllers/daftarKantorController");
 const recentActivityController = require("../controllers/recentActivityController");
+const adminController = require("../controllers/adminController");
 
 // Health Check Route
 router.get("/health", (req, res) => {
@@ -38,6 +39,15 @@ const validateSettings = [
   body("reminder_enabled").optional().isBoolean(),
   body("group_notification_enabled").optional().isBoolean(),
   body("whatsapp_group_id").optional().notEmpty().trim(),
+];
+
+const validateAdmin = [
+  body("username").notEmpty().trim().isLength({ min: 3, max: 50 }),
+  body("email").isEmail().normalizeEmail(),
+  body("full_name").notEmpty().trim().isLength({ min: 2, max: 100 }),
+  body("role").optional().isIn(['admin', 'super_admin']),
+  body("whatsapp_number").optional().trim(),
+  body("password").optional().isLength({ min: 6 })
 ];
 
 // Dashboard Routes
@@ -81,7 +91,16 @@ router.put("/settings/templates", settingsController.updateTemplates);
 router.get("/kantor", authenticateAdmin, daftarKantorController.getAllKantor);
 router.get("/kantor/search/:query", authenticateAdmin, daftarKantorController.searchKantor);
 
-// Recent Activity Routes
+// Recent Activities Routes
 router.get("/recent-activities", authenticateAdmin, recentActivityController.getRecentActivities);
+
+// Admin Management Routes
+router.get("/admins", authenticateAdmin, adminController.getAllAdmins);
+router.get("/admins/:id", authenticateAdmin, adminController.getAdminById);
+router.post("/admins", authenticateAdmin, validateAdmin, adminController.createAdmin);
+router.put("/admins/:id", authenticateAdmin, adminController.updateAdmin);
+router.delete("/admins/:id", authenticateAdmin, adminController.deleteAdmin);
+router.put("/admins/:id/password", authenticateAdmin, adminController.updateAdminPassword);
+router.put("/admins/:id/toggle-status", authenticateAdmin, adminController.toggleAdminStatus);
 
 module.exports = router;
