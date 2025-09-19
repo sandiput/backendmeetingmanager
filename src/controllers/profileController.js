@@ -1,12 +1,12 @@
-const Admin = require('../models/admin');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const Admin = require("../models/admin");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../../uploads/profiles');
+    const uploadPath = path.join(__dirname, "../../uploads/profiles");
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
@@ -14,26 +14,26 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
-  }
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "profile-" + uniqueSuffix + path.extname(file.originalname));
+  },
 });
 
 const fileFilter = (req, file, cb) => {
   // Accept only image files
-  if (file.mimetype.startsWith('image/')) {
+  if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed!'), false);
+    cb(new Error("Only image files are allowed!"), false);
   }
 };
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
 });
 
 // Get current user profile
@@ -43,19 +43,19 @@ const getProfile = async (req, res) => {
     if (!admin) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     res.json({
       success: true,
-      data: admin.toJSON()
+      data: admin.toJSON(),
     });
   } catch (error) {
-    console.error('Get profile error:', error);
+    console.error("Get profile error:", error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: "Internal server error",
     });
   }
 };
@@ -65,11 +65,11 @@ const updateProfile = async (req, res) => {
   try {
     const { full_name, username, email, whatsapp_number, password } = req.body;
     const admin = await Admin.findByPk(req.admin.id);
-    
+
     if (!admin) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
@@ -77,12 +77,12 @@ const updateProfile = async (req, res) => {
     if (username && username !== admin.username) {
       const existingUsername = await Admin.findOne({
         where: { username },
-        attributes: ['id']
+        attributes: ["id"],
       });
       if (existingUsername && existingUsername.id !== admin.id) {
         return res.status(400).json({
           success: false,
-          message: 'Username already exists'
+          message: "Username already exists",
         });
       }
     }
@@ -90,12 +90,12 @@ const updateProfile = async (req, res) => {
     if (email && email !== admin.email) {
       const existingEmail = await Admin.findOne({
         where: { email },
-        attributes: ['id']
+        attributes: ["id"],
       });
       if (existingEmail && existingEmail.id !== admin.id) {
         return res.status(400).json({
           success: false,
-          message: 'Email already exists'
+          message: "Email already exists",
         });
       }
     }
@@ -112,14 +112,14 @@ const updateProfile = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Profile updated successfully',
-      data: admin.toJSON()
+      message: "Profile updated successfully",
+      data: admin.toJSON(),
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    console.error("Update profile error:", error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: "Internal server error",
     });
   }
 };
@@ -130,7 +130,7 @@ const uploadProfilePicture = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'No file uploaded'
+        message: "No file uploaded",
       });
     }
 
@@ -138,13 +138,13 @@ const uploadProfilePicture = async (req, res) => {
     if (!admin) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     // Delete old profile picture if exists
     if (admin.profile_picture) {
-      const oldImagePath = path.join(__dirname, '../../uploads/profiles', path.basename(admin.profile_picture));
+      const oldImagePath = path.join(__dirname, "../../uploads/profiles", path.basename(admin.profile_picture));
       if (fs.existsSync(oldImagePath)) {
         fs.unlinkSync(oldImagePath);
       }
@@ -152,20 +152,20 @@ const uploadProfilePicture = async (req, res) => {
 
     // Update profile picture path
     const profilePicturePath = `uploads/profiles/${req.file.filename}`;
-    await admin.update({ profile_picture: profilePicturePath });
+    await admin.update({ profile_picture: "/" + profilePicturePath });
 
     res.json({
       success: true,
-      message: 'Profile picture uploaded successfully',
+      message: "Profile picture uploaded successfully",
       data: {
-        profile_picture: profilePicturePath
-      }
+        profile_picture: profilePicturePath,
+      },
     });
   } catch (error) {
-    console.error('Upload profile picture error:', error);
+    console.error("Upload profile picture error:", error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: "Internal server error",
     });
   }
 };
@@ -174,5 +174,5 @@ module.exports = {
   getProfile,
   updateProfile,
   uploadProfilePicture,
-  upload
+  upload,
 };
