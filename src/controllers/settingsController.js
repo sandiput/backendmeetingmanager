@@ -11,9 +11,11 @@ class SettingsController {
       // Create default settings if none exist
       if (!settings) {
         settings = await Settings.create({
-          whatsapp_enabled: false,
-          whatsapp_api_key: "",
-          whatsapp_api_url: "",
+          group_notification_time: "07:00",
+          group_notification_enabled: false,
+          individual_reminder_minutes: 60,
+          individual_reminder_enabled: false,
+          whatsapp_connected: false,
           whatsapp_group_id: "",
           notification_templates: {
             group_daily: "🗓️ _Jadwal Meeting Hari Ini_\n📅 {date}\n\n{meetings}\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen",
@@ -61,9 +63,11 @@ class SettingsController {
       const [settings] = await Settings.findOrCreate({
         where: {},
         defaults: {
-          whatsapp_enabled: false,
-          whatsapp_api_key: "",
-          whatsapp_api_url: "",
+          group_notification_time: "07:00",
+          group_notification_enabled: false,
+          individual_reminder_minutes: 60,
+          individual_reminder_enabled: false,
+          whatsapp_connected: false,
           whatsapp_group_id: "",
           notification_templates: {
             group_daily: "🗓️ _Jadwal Meeting Hari Ini_\n📅 {date}\n\n{meetings}\n\n📱 Pesan otomatis dari Meeting Manager\n🤖 Subdirektorat Intelijen",
@@ -80,9 +84,9 @@ class SettingsController {
       const updatedSettings = await settings.update(updates);
 
       // Update group notification schedule if time changed
-       if (updates.group_notification_time && global.whatsappScheduler) {
-         await global.whatsappScheduler.updateGroupNotificationSchedule();
-       }
+      if (updates.group_notification_time && global.whatsappScheduler) {
+        await global.whatsappScheduler.updateGroupNotificationSchedule();
+      }
 
       // Determine changed fields
       const changedFields = Object.keys(updates).filter((key) => JSON.stringify(oldValues[key]) !== JSON.stringify(updatedSettings[key]));
@@ -121,8 +125,6 @@ class SettingsController {
       });
     }
   }
-
-
 
   // Update notification templates
   async updateTemplates(req, res) {
@@ -174,10 +176,6 @@ class SettingsController {
       });
     }
   }
-
-
-
-
 
   // Preview group message
   async previewGroupMessage(req, res) {
@@ -239,12 +237,6 @@ class SettingsController {
       });
     }
   }
-
-
-
-
-
-
 }
 
 module.exports = new SettingsController();
