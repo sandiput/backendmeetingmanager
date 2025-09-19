@@ -75,13 +75,7 @@ class DashboardController {
         0,
       ]);
 
-      // Log audit for dashboard stats view
-      await logDetailedAudit(req, {
-        action_type: "read",
-        table_name: "dashboard_stats",
-        description: "Lihat Statistik Dashboard",
-        success: true,
-      });
+      // Log audit untuk dashboard stats telah dihapus
 
       res.json({
         success: true,
@@ -165,21 +159,7 @@ class DashboardController {
         avg_participants: avgParticipants,
       };
 
-      // Log audit for review stats view
-      await logDetailedAudit(req, {
-        action_type: "READ",
-        table_name: "review_stats",
-        description: `Viewed review statistics for ${period} period`,
-        success: true,
-      });
-
-      // Log audit for seksi stats view
-      await logDetailedAudit(req, {
-        action_type: "READ",
-        table_name: "seksi_stats",
-        description: `Viewed seksi statistics for ${period} period`,
-        success: true,
-      });
+      // Log audit untuk review dan seksi stats telah dihapus
 
       res.json({
         success: true,
@@ -236,13 +216,7 @@ class DashboardController {
         }
       );
 
-      // Log audit for top participants view
-      await logDetailedAudit(req, {
-        action_type: "read",
-        table_name: "top_participants",
-        description: `Viewed top participants for ${period} period`,
-        success: true,
-      });
+      // Log audit untuk top participants telah dihapus
 
       res.json({
         success: true,
@@ -290,13 +264,7 @@ class DashboardController {
         }
       );
 
-      // Log audit for top invited by view
-      await logDetailedAudit(req, {
-        action_type: "read",
-        table_name: "top_invited_by",
-        description: `Viewed top invited by for ${period} period`,
-        success: true,
-      });
+      // Log audit untuk top invited by telah dihapus
 
       res.json({
         success: true,
@@ -376,13 +344,7 @@ class DashboardController {
       // Use getMeetingTrendsData method for consistent logic
       const trends = await this.getMeetingTrendsData(period, startDate, endDate);
 
-      // Log audit for meeting trends view
-      await logDetailedAudit(req, {
-        action_type: "read",
-        table_name: "meeting_trends",
-        description: `Lihat Tren Meeting untuk periode ${period}`,
-        success: true,
-      });
+      // Log audit untuk meeting trends telah dihapus
 
       res.json({
         success: true,
